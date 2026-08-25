@@ -1,0 +1,110 @@
+name: Deployment Artifact
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Validate and build linux-amd64
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Install runtime build dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libsqlite3-dev
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate API contract
+        run: pnpm api:generate
+
+      - name: Upload generated API contract
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-api-contract-${{ github.sha }}
+          path: |
+            backend/docs
+            packages/api-contract/src/types.generated.ts
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Verify generated API contract is committed
+        run: git diff --exit-code -- backend/docs packages/api-contract/src/types.generated.ts
+
+      - name: Run workspace checks
+        shell: bash
+        run: |
+          mkdir -p evidence
+          set -o pipefail
+          pnpm check 2>&1 | tee evidence/workspace-quality.log
+
+      - name: Run backend tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cd backend
+          go test ./... 2>&1 | tee ../evidence/backend-tests.log
+
+      - name: Build static frontend
+        run: pnpm --filter @deeix/web build
+
+      - name: Build application binary
+        shell: bash
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          version=$(cat VERSION)
+          build_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          mkdir -p release
+          cd backend
+          go build -trimpath \
+            -ldflags="-s -w -X github.com/DEEIX-AI/DEEIX-Chat/backend/internal/shared/buildinfo.Version=${version} -X github.com/DEEIX-AI/DEEIX-Chat/backend/internal/shared/buildinfo.Commit=${GITHUB_SHA} -X github.com/DEEIX-AI/DEEIX-Chat/backend/internal/shared/buildinfo.BuildTime=${build_time}" \
+            -o ../release/deeix-chat ./cmd/server
+
+      - name: Assemble deployment directory
+        shell: bash
+        run: |
+          mkdir -p release/frontend release/evidence release/licenses
+          cp -a frontend/out release/frontend/out
+          cp config.sqlite.example.yaml release/config.sqlite.example.yaml
+          cp VERSION release/VERSION
+          cp LICENSE NOTICE release/licenses/
+          cp evidence/backend-tests.log evidence/workspace-quality.log release/evidence/
+          printf 'commit=%s\nworkflow_run=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > release/BUILD-MANIFEST
+          (
+            cd release
+            sha256sum deeix-chat > SHA256SUMS
+            find frontend/out -type f -print0 | sort -z | xargs -0 sha256sum >> SHA256SUMS
+          )
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deeix-chat-linux-amd64-${{ github.sha }}
+          path: release
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 6
