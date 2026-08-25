@@ -256,7 +256,7 @@ func (h *Handler) PatchBillingConfig(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} WeeklyQuotaCycleDataResponse
+// @Success 200 {object} WeeklyQuotaCycleResponseDoc
 // @Failure 500 {object} ErrorDoc
 // @Router /admin/billing/weekly-quota/reset-time [get]
 func (h *Handler) GetWeeklyQuotaResetTime(c *gin.Context) {
@@ -275,13 +275,13 @@ func (h *Handler) GetWeeklyQuotaResetTime(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param body body SetWeeklyQuotaResetTimeRequest true "UTC 重置时间"
-// @Success 200 {object} WeeklyQuotaCycleDataResponse
+// @Param body body UpdateWeeklyQuotaResetTimeRequest true "UTC 重置时间"
+// @Success 200 {object} WeeklyQuotaCycleResponseDoc
 // @Failure 400 {object} ErrorDoc
 // @Failure 500 {object} ErrorDoc
 // @Router /admin/billing/weekly-quota/reset-time [patch]
 func (h *Handler) SetWeeklyQuotaResetTime(c *gin.Context) {
-	var req SetWeeklyQuotaResetTimeRequest
+	var req UpdateWeeklyQuotaResetTimeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.InvalidRequestBody(c, err)
 		return
@@ -303,7 +303,7 @@ func (h *Handler) SetWeeklyQuotaResetTime(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} WeeklyQuotaCycleDataResponse
+// @Success 200 {object} WeeklyQuotaCycleResponseDoc
 // @Failure 400 {object} ErrorDoc
 // @Failure 500 {object} ErrorDoc
 // @Router /admin/billing/weekly-quota/reset [post]

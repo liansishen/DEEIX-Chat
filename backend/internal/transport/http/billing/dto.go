@@ -62,8 +62,8 @@ type UpdateBillingAccountBalanceRequest struct {
 	Description string   `json:"description,omitempty" binding:"omitempty,max=255"`
 }
 
-// SetWeeklyQuotaNextResetRequest updates the shared UTC reset boundary.
-type SetWeeklyQuotaResetTimeRequest struct {
+// UpdateWeeklyQuotaResetTimeRequest updates the shared UTC reset boundary.
+type UpdateWeeklyQuotaResetTimeRequest struct {
 	NextResetAt time.Time `json:"nextResetAt" binding:"required"`
 }
 
@@ -674,6 +674,12 @@ type OpenRouterOfficialPricingResponseDoc struct {
 type BillingConfigResponseDoc struct {
 	ErrorMsg string                    `json:"errorMsg"`
 	Data     BillingConfigDataResponse `json:"data"`
+}
+
+// WeeklyQuotaCycleResponseDoc 统一周额度周期响应文档。
+type WeeklyQuotaCycleResponseDoc struct {
+	ErrorMsg string                       `json:"errorMsg"`
+	Data     WeeklyQuotaCycleDataResponse `json:"data"`
 }
 
 // BillingPlanResponseDoc 套餐操作响应文档。
