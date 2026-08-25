@@ -1,4 +1,5 @@
 import { authedRequest } from "@/shared/api/authed-client";
+import type { UpdateWeeklyQuotaResetTimeRequest, WeeklyQuotaCycleDataResponse } from "@deeix/api-contract";
 import type { PagePayload } from "@/shared/api/common.types";
 import type {
   AdminBillingConfigData,
@@ -199,4 +200,16 @@ export async function getAdminOpenRouterOfficialPricing(
     { accessToken },
     true,
   );
+}
+
+export async function getAdminWeeklyQuotaCycle(accessToken: string): Promise<WeeklyQuotaCycleDataResponse> {
+  return authedRequest<WeeklyQuotaCycleDataResponse>("/api/v1/admin/billing/weekly-quota/reset-time", { accessToken }, true);
+}
+
+export async function updateAdminWeeklyQuotaResetTime(accessToken: string, payload: UpdateWeeklyQuotaResetTimeRequest): Promise<WeeklyQuotaCycleDataResponse> {
+  return authedRequest<WeeklyQuotaCycleDataResponse>("/api/v1/admin/billing/weekly-quota/reset-time", { method: "PATCH", accessToken, body: payload }, true);
+}
+
+export async function resetAdminWeeklyQuota(accessToken: string): Promise<WeeklyQuotaCycleDataResponse> {
+  return authedRequest<WeeklyQuotaCycleDataResponse>("/api/v1/admin/billing/weekly-quota/reset", { method: "POST", accessToken }, true);
 }

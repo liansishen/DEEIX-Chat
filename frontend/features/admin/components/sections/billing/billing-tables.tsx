@@ -43,13 +43,14 @@ export function PeriodBillingTable({
           <TableHead>{t("plans.tableDescription")}</TableHead>
           <TableHead>{t("plans.tablePrice")}</TableHead>
           <TableHead>{t("plans.tableCredit")}</TableHead>
+          <TableHead>{t("plans.tableWeeklyCredit")}</TableHead>
           <TableHead>{t("plans.tableDiscount")}</TableHead>
           <TableHead stickyEnd className="w-[56px]" />
         </TableRow>
       </TableHeader>
       <TableBody>
-        {initialLoading ? <TableLoadingRow colSpan={6} /> : null}
-        {!loading && plans.length === 0 ? <TableEmptyRow colSpan={6}>{t("plans.empty")}</TableEmptyRow> : null}
+        {initialLoading ? <TableLoadingRow colSpan={7} /> : null}
+        {!loading && plans.length === 0 ? <TableEmptyRow colSpan={7}>{t("plans.empty")}</TableEmptyRow> : null}
         {showPlans
           ? plans.map((plan) => {
               const defaultPrice = plan.prices.find((item) => item.isDefault) || plan.prices[0];
@@ -77,6 +78,9 @@ export function PeriodBillingTable({
                       {formatCreditUSD(plan.periodCreditUSD)}
                       <span className="ml-1 text-xs text-muted-foreground">{t("plans.perPeriod")}</span>
                     </span>
+                  </TableCell>
+                  <TableCell className="py-1.5">
+                    <span>{formatCreditUSD(plan.weeklyCreditUSD)}<span className="ml-1 text-xs text-muted-foreground">{t("plans.perWeek")}</span></span>
                   </TableCell>
                   <TableCell className="py-1.5">{plan.discountPercent}%</TableCell>
                   <TableCell stickyEnd className="w-[56px] py-1.5 text-right">

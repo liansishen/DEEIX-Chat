@@ -57,7 +57,7 @@ export type AdminBillingPlanData = Omit<BillingPlanDataResponse, "plan"> & {
   plan: AdminBillingPlanDTO;
 };
 
-export type AdminBillingMode = "self" | "period" | "usage";
+export type AdminBillingMode = "self" | "period" | "weekly" | "usage";
 
 export type NativeToolPricingDTO = NativeToolPricingResponse;
 export type AdminNativeToolPricingPayload = NativeToolPricingRequest;

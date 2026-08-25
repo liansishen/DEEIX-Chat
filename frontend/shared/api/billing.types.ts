@@ -37,7 +37,7 @@ export type CheckoutData = Omit<CheckoutDataResponse, "checkout"> & {
   checkout: CheckoutDTO;
 };
 
-export type BillingMode = "self" | "period" | "usage";
+export type BillingMode = "self" | "period" | "weekly" | "usage";
 
 export type NativeToolPricingDTO = Pick<
   NativeToolPricingResponse,

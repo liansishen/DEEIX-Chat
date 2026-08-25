@@ -654,6 +654,14 @@
       "invalidRedemptionCode": "Enter a redemption code.",
       "redemptionSucceeded": "Redemption applied",
       "redemptionFailed": "Redemption failed"
+    },
+    "weeklyUsage": {
+      "title": "Weekly allowance",
+      "currentCycle": "Current weekly cycle",
+      "nextReset": "Next reset",
+      "used": "Used {value}",
+      "total": "Allowance {value}",
+      "remaining": "Remaining {value}"
     }
   }
 }

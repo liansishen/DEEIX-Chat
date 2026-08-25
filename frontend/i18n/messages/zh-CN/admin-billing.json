@@ -27,8 +27,14 @@
     "modes": {
       "self": "自用模式",
       "period": "周期计费",
-      "usage": "按量计费"
-    }
+      "usage": "按量计费",
+      "weekly": "每周订阅计费"
+    },
+    "weeklyResetTitle": "每周额度重置",
+    "weeklyNextReset": "下次重置时间",
+    "weeklyManualReset": "立即重置",
+    "weeklyResetConfirm": "保存每周额度重置时间？",
+    "weeklyManualResetConfirm": "立即重置所有每周额度？"
   },
   "payment": {
     "title": "支付配置",
@@ -149,7 +155,8 @@
       "limit": "次数",
       "status": "状态",
       "expiresAt": "过期"
-    }
+    },
+    "weeklyReward": "每周订阅 · {plan} · {count}个月"
   },
   "modelPricing": {
     "title": "模型定价",
@@ -326,7 +333,10 @@
     "redemptionDeleted": "已删除 {count} 个兑换码",
     "redemptionDeleteFailed": "删除兑换码失败",
     "redemptionDeletePartialFailed": "部分兑换码删除失败",
-    "redemptionDeleteSummary": "成功 {successCount} 个，未找到 {notFoundCount} 个，失败 {failedCount} 个。"
+    "redemptionDeleteSummary": "成功 {successCount} 个，未找到 {notFoundCount} 个，失败 {failedCount} 个。",
+    "weeklyResetSaved": "每周额度重置时间已保存",
+    "weeklyResetCompleted": "每周额度已重置",
+    "weeklyResetFailed": "更新每周额度重置失败"
   },
   "importErrors": {
     "invalidJSON": "文件内容不是合法 JSON",

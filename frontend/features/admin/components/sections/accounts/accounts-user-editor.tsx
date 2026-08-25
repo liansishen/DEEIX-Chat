@@ -214,7 +214,7 @@ export function CreateUserDialog({
               />
             </div>
 
-            {billingMode === "period" ? (
+            {(billingMode === "period" || billingMode === "weekly") ? (
               <div className="space-y-3">
                 <div className="space-y-1">
                   <p className="text-xs font-normal text-muted-foreground">{t("editor.subscriptionPlan")}</p>
@@ -445,10 +445,10 @@ export function EditUserSheet({
                 <Badge variant="outline" className="text-muted-foreground">ID: {resolveDetailValue(editDialogTarget?.id)}</Badge>
                 <Badge variant="outline" className="text-muted-foreground">{resolveDetailValue(editDialogTarget?.role)}</Badge>
                 <Badge variant="outline" className="text-muted-foreground">{resolveUserStatusLabel(editDialogTarget?.status)}</Badge>
-                {billingMode === "period" ? (
+                {(billingMode === "period" || billingMode === "weekly") ? (
                   <Badge variant="outline" className="text-muted-foreground">{resolveDetailValue(editDialogTarget?.subscriptionTier)}</Badge>
                 ) : null}
-                {billingMode !== "self" ? (
+                {billingMode !== "self" && billingMode !== "weekly" ? (
                   <Badge variant="outline" className="text-muted-foreground">
                     {formatBillingBalance(editDialogTarget?.billingBalanceUSD, billingDisplay)}
                   </Badge>
@@ -580,9 +580,9 @@ export function EditUserSheet({
             </div>
           </SheetSection>
 
-          {billingMode !== "self" ? (
+          {billingMode !== "self" && billingMode !== "weekly" ? (
             <SheetSection title={t("editor.billingSection")}>
-              {billingMode === "period" ? (
+              {(billingMode === "period" || billingMode === "weekly") ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1">
                     <Label className="text-xs font-normal text-muted-foreground">{t("editor.subscriptionPlan")}</Label>

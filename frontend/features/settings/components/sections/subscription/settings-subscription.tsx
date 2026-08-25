@@ -399,6 +399,9 @@ export function SettingsSubscription() {
   const periodUsed = billingOverview?.periodUsedUSD ?? 0;
   const periodPercent = periodCredit > 0 ? Math.min(100, Math.max(0, (periodUsed / periodCredit) * 100)) : 0;
   const billingAccount = billingOverview?.account ?? null;
+  const weeklyCredit = billingOverview?.weeklyCreditUSD ?? currentPlan?.weeklyCreditUSD ?? 0;
+  const weeklyUsed = billingOverview?.weeklyUsedUSD ?? 0;
+  const weeklyRemaining = billingOverview?.weeklyRemainingUSD ?? Math.max(0, weeklyCredit - weeklyUsed);
 
   return (
     <SettingsPage className="space-y-6">
@@ -436,6 +439,11 @@ export function SettingsSubscription() {
         periodCredit={periodCredit}
         periodUsed={periodUsed}
         periodPercent={periodPercent}
+        weeklyCredit={weeklyCredit}
+        weeklyUsed={weeklyUsed}
+        weeklyRemaining={weeklyRemaining}
+        weeklyExhausted={billingOverview?.weeklyExhausted ?? weeklyRemaining <= 0}
+        weeklyNextResetAt={billingOverview?.weeklyNextResetAt ?? null}
         billingDisplay={billingDisplay}
         onOpenRedemptionDialog={() => setRedemptionDialogOpen(true)}
         onOpenTopUpDialog={() => setTopUpDialogOpen(true)}

@@ -654,6 +654,14 @@
       "invalidRedemptionCode": "请输入兑换码。",
       "redemptionSucceeded": "兑换成功",
       "redemptionFailed": "兑换失败"
+    },
+    "weeklyUsage": {
+      "title": "每周额度",
+      "currentCycle": "当前每周周期",
+      "nextReset": "下次重置",
+      "used": "已使用 {value}",
+      "total": "额度 {value}",
+      "remaining": "剩余 {value}"
     }
   }
 }

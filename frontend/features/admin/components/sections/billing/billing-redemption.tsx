@@ -53,10 +53,12 @@ type RedemptionFormState = {
   id?: number;
   code: string;
   quantity: string;
-  mode: "usage" | "period";
+  mode: "usage" | "period" | "weekly";
   creditUSD: string;
   planID: string;
   durationDays: string;
+  durationUnit: "month";
+  durationCount: "1" | "3" | "12";
   maxRedemptions: string;
   perUserLimit: string;
   expiresAt: string;
@@ -75,10 +77,12 @@ function createRedemptionFormState(mode: AdminBillingMode, planID = ""): Redempt
   return {
     code: "",
     quantity: "1",
-    mode: mode === "period" ? "period" : "usage",
+    mode: mode === "weekly" ? "weekly" : mode === "period" ? "period" : "usage",
     creditUSD: "20",
     planID,
     durationDays: "30",
+    durationUnit: "month",
+    durationCount: "1",
     maxRedemptions: "1",
     perUserLimit: "1",
     expiresAt: "",
@@ -96,10 +100,12 @@ function redemptionFormFromCode(item: AdminRedemptionCodeDTO): RedemptionFormSta
     id: item.id,
     code: "",
     quantity: "1",
-    mode: item.mode === "period" ? "period" : "usage",
+    mode: item.mode === "weekly" ? "weekly" : item.mode === "period" ? "period" : "usage",
     creditUSD: String(item.creditUSD || 0),
     planID: item.planID ? String(item.planID) : "",
     durationDays: String(item.durationDays || 0),
+    durationUnit: item.durationUnit === "month" ? "month" : "month",
+    durationCount: item.durationCount === 3 ? "3" : item.durationCount === 12 ? "12" : "1",
     maxRedemptions: item.maxRedemptions == null ? "" : String(item.maxRedemptions),
     perUserLimit: String(item.perUserLimit || 1),
     expiresAt: redemptionExpiresFormValue(item.expiresAt),
@@ -662,6 +668,7 @@ export function BillingRedemptionSection({ plans, billingMode, loading }: Billin
             ...payload,
             planID,
             durationDays,
+            ...(redemptionForm.mode === "weekly" ? { durationUnit: redemptionForm.durationUnit, durationCount: Number(redemptionForm.durationCount) as 1 | 3 | 12 } : {}),
           });
         })();
       const created = data.results ?? [];
@@ -679,9 +686,11 @@ export function BillingRedemptionSection({ plans, billingMode, loading }: Billin
   }
 
   function redemptionRewardLabel(item: AdminRedemptionCodeDTO): string {
-    if (item.mode === "period") {
+    if (item.mode === "period" || item.mode === "weekly") {
       const planLabel = planNameByID.get(item.planID) || t("redemption.unknownPlan");
-      return t("redemption.periodReward", { plan: planLabel, days: item.durationDays || 0 });
+      return item.mode === "weekly"
+        ? t("redemption.weeklyReward", { plan: planLabel, count: item.durationCount || 1 })
+        : t("redemption.periodReward", { plan: planLabel, days: item.durationDays || 0 });
     }
     return t("redemption.usageReward", { amount: formatCreditUSD(item.creditUSD) });
   }
@@ -703,7 +712,7 @@ export function BillingRedemptionSection({ plans, billingMode, loading }: Billin
     if (billingMode === "self") {
       return t("redemption.unavailableSelf");
     }
-    const codeMode = item.mode === "period" ? "period" : "usage";
+    const codeMode = item.mode === "weekly" ? "weekly" : item.mode === "period" ? "period" : "usage";
     const modeAllowed = billingMode === "period"
       ? codeMode === "usage" || codeMode === "period"
       : billingMode === codeMode;
@@ -769,6 +778,7 @@ export function BillingRedemptionSection({ plans, billingMode, loading }: Billin
                 { label: t("redemption.allModes"), value: "" },
                 { label: t("billingConfig.modes.usage"), value: "usage" },
                 { label: t("billingConfig.modes.period"), value: "period" },
+                { label: t("billingConfig.modes.weekly"), value: "weekly" },
               ],
             },
             {
@@ -1054,7 +1064,7 @@ export function BillingRedemptionSection({ plans, billingMode, loading }: Billin
                         setRedemptionForm((current) => current ? {
                           ...current,
                           mode,
-                          planID: mode === "period" ? current.planID || defaultRedemptionPlanID : current.planID,
+                          planID: (mode === "period" || mode === "weekly") ? current.planID || defaultRedemptionPlanID : current.planID,
                         } : current);
                       }}
                     >
@@ -1064,6 +1074,7 @@ export function BillingRedemptionSection({ plans, billingMode, loading }: Billin
                       <SelectContent align="end">
                         <SelectItem value="usage">{t("billingConfig.modes.usage")}</SelectItem>
                         <SelectItem value="period">{t("billingConfig.modes.period")}</SelectItem>
+                        <SelectItem value="weekly">{t("billingConfig.modes.weekly")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1126,6 +1137,12 @@ export function BillingRedemptionSection({ plans, billingMode, loading }: Billin
                         disabled={redemptionSaving || Boolean(redemptionDialogForm.id)}
                         onChange={(event) => setRedemptionForm((current) => current ? { ...current, durationDays: event.target.value } : current)}
                       />
+                      {redemptionDialogForm.mode === "weekly" ? (
+                        <Select value={redemptionDialogForm.durationCount} onValueChange={(value) => setRedemptionForm((current) => current ? { ...current, durationCount: value as "1" | "3" | "12" } : current)} disabled={redemptionSaving || Boolean(redemptionDialogForm.id)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent><SelectItem value="1">1 month</SelectItem><SelectItem value="3">1 quarter</SelectItem><SelectItem value="12">1 year</SelectItem></SelectContent>
+                        </Select>
+                      ) : null}
                     </div>
                   </div>
                 )}

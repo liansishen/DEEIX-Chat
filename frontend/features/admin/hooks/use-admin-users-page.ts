@@ -448,12 +448,12 @@ export function useAdminUsersPage({
         return;
       }
 
-      if (billingMode === "period" && createPayload.subscriptionTier !== "free" && !createPayload.subscriptionExpiresAt.trim()) {
+      if ((billingMode === "period" || billingMode === "weekly") && createPayload.subscriptionTier !== "free" && !createPayload.subscriptionExpiresAt.trim()) {
         toast.error(t("toast.createFailed"), { description: t("validation.nonFreeRequiresExpiry") });
         return;
       }
 
-      if (billingMode === "period" && createPayload.subscriptionTier !== "free" && !resolveSubscriptionExpiryDate(createPayload.subscriptionExpiresAt)) {
+      if ((billingMode === "period" || billingMode === "weekly") && createPayload.subscriptionTier !== "free" && !resolveSubscriptionExpiryDate(createPayload.subscriptionExpiresAt)) {
         toast.error(t("toast.createFailed"), { description: t("validation.invalidSubscriptionExpiry") });
         return;
       }
@@ -474,7 +474,7 @@ export function useAdminUsersPage({
           email: createPayload.email.trim(),
           timezone: createPayload.timezone.trim(),
           locale: createPayload.locale.trim(),
-          subscriptionTier: billingMode === "period" ? createPayload.subscriptionTier : undefined,
+          subscriptionTier: (billingMode === "period" || billingMode === "weekly") ? createPayload.subscriptionTier : undefined,
           subscriptionExpiresAt:
             billingMode !== "period" || createPayload.subscriptionTier === "free" || !createPayload.subscriptionExpiresAt.trim()
               ? undefined
@@ -595,7 +595,7 @@ export function useAdminUsersPage({
     if (nextProfilePreferences !== editDialogTarget.profilePreferences.trim()) {
       patchPayload.profilePreferences = nextProfilePreferences;
     }
-    if (billingMode === "period") {
+    if ((billingMode === "period" || billingMode === "weekly")) {
       if (!nextSubscriptionTier) {
         toast.error(t("toast.editFailed"), { description: t("validation.selectSubscriptionPlan") });
         return;

@@ -27,8 +27,14 @@
     "modes": {
       "self": "Self-use",
       "period": "Subscription billing",
+      "weekly": "Weekly subscription billing",
       "usage": "Usage billing"
-    }
+    },
+    "weeklyResetTitle": "Weekly quota reset",
+    "weeklyNextReset": "Next reset time",
+    "weeklyManualReset": "Reset now",
+    "weeklyResetConfirm": "Save the weekly quota reset time?",
+    "weeklyManualResetConfirm": "Reset all weekly quotas now?"
   },
   "payment": {
     "title": "Payment settings",
@@ -64,6 +70,9 @@
     "price": "Price",
     "interval": "Interval",
     "periodCredit": "Period credit",
+    "weeklyCredit": "Weekly credit",
+    "tableWeeklyCredit": "Weekly credit",
+    "perWeek": "per week",
     "discount": "Discount",
     "permissionGroup": "Permission group",
     "permissionGroupDescription": "Users subscribed to this plan automatically gain this permission group's model access.",
@@ -149,7 +158,8 @@
       "limit": "Limit",
       "status": "Status",
       "expiresAt": "Expiry"
-    }
+    },
+    "weeklyReward": "Weekly subscription · {plan} · {count} month(s)"
   },
   "modelPricing": {
     "title": "Model pricing",
@@ -326,7 +336,10 @@
     "redemptionDeleted": "Deleted {count} redemption codes",
     "redemptionDeleteFailed": "Failed to delete redemption code",
     "redemptionDeletePartialFailed": "Some redemption codes were not deleted",
-    "redemptionDeleteSummary": "Deleted {successCount}, not found {notFoundCount}, failed {failedCount}."
+    "redemptionDeleteSummary": "Deleted {successCount}, not found {notFoundCount}, failed {failedCount}.",
+    "weeklyResetSaved": "Weekly quota reset time saved",
+    "weeklyResetCompleted": "Weekly quotas reset",
+    "weeklyResetFailed": "Failed to update weekly quota reset"
   },
   "importErrors": {
     "invalidJSON": "File content is not valid JSON",

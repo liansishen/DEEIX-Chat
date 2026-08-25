@@ -390,7 +390,7 @@ export interface BillingConfigDataResponse {
 
 export interface BillingConfigRequest {
   displayCurrency?: "USD" | "CNY";
-  mode: "self" | "period" | "usage";
+  mode: "self" | "period" | "weekly" | "usage";
   nativeToolBillingEnabled?: boolean;
   nativeToolPricing?: NativeToolPricingRequest[];
   /** @min 0 */
@@ -408,10 +408,32 @@ export interface BillingConfigResponse {
   prepaidAmountNanousd: number;
   prepaidAmountUSD: number;
   usdToCNYRate: number;
+  weeklyNextResetAt: string | null;
 }
 
 export interface BillingConfigResponseDoc {
   data: BillingConfigDataResponse;
+  errorMsg: string;
+}
+
+export interface WeeklyQuotaCycleResponse {
+  id: number;
+  startAt: string;
+  endAt: string;
+  resetReason: string;
+  resetByUserID: number | null;
+}
+
+export interface WeeklyQuotaCycleDataResponse {
+  cycle: WeeklyQuotaCycleResponse;
+}
+
+export interface UpdateWeeklyQuotaResetTimeRequest {
+  nextResetAt: string;
+}
+
+export interface WeeklyQuotaCycleResponseDoc {
+  data: WeeklyQuotaCycleDataResponse;
   errorMsg: string;
 }
 
@@ -430,6 +452,16 @@ export interface BillingOverviewDataResponse {
 export interface BillingOverviewResponse {
   account: BillingAccountResponse | null;
   mode: string;
+  weeklyCreditNanousd: number;
+  weeklyCreditUSD: number;
+  weeklyEndAt: string | null;
+  weeklyExhausted: boolean;
+  weeklyNextResetAt: string | null;
+  weeklyRemainingNanousd: number;
+  weeklyRemainingUSD: number;
+  weeklyStartAt: string | null;
+  weeklyUsedNanousd: number;
+  weeklyUsedUSD: number;
   periodCreditNanousd: number;
   periodCreditUSD: number;
   periodEndAt: string | null;
@@ -1179,7 +1211,9 @@ export interface CreateRedemptionCodeRequest {
   expiresAt?: string | null;
   /** @min 1 */
   maxRedemptions?: number;
-  mode: "usage" | "period";
+  mode: "usage" | "period" | "weekly";
+  durationUnit?: "month";
+  durationCount?: 1 | 3 | 12;
   /**
    * @min 1
    * @max 100
@@ -2825,6 +2859,8 @@ export interface RedemptionCodeResponse {
   id: number;
   maxRedemptions: number | null;
   mode: string;
+  durationUnit: string;
+  durationCount: number;
   perUserLimit: number;
   planID: number;
   redeemedCount: number;
@@ -2840,6 +2876,8 @@ export interface RedemptionCodeResponseDoc {
 }
 
 export interface RedemptionResponse {
+  durationUnit: string;
+  durationCount: number;
   balanceTransactionID: number;
   codeID: number;
   createdAt: string;
@@ -3374,6 +3412,8 @@ export interface UpdateBillingPlanRequest {
   name: string;
   /** @min 0 */
   periodCreditUSD: number;
+  /** @min 0 */
+  weeklyCreditUSD?: number;
   permissionGroupID?: number | null;
 }
 
@@ -4413,6 +4453,51 @@ export namespace Admin {
     export type RequestBody = BillingConfigRequest;
     export type RequestHeaders = {};
     export type ResponseBody = BillingConfigResponseDoc;
+  }
+
+  /**
+   * @description 查询每周额度周期
+   * @tags admin-billing
+   * @name BillingWeeklyQuotaResetTimeList
+   * @request GET:/admin/billing/weekly-quota/reset-time
+   * @secure
+   */
+  export namespace BillingWeeklyQuotaResetTimeList {
+    export type RequestParams = {};
+    export type RequestQuery = {};
+    export type RequestBody = never;
+    export type RequestHeaders = {};
+    export type ResponseBody = WeeklyQuotaCycleResponseDoc;
+  }
+
+  /**
+   * @description 设置每周额度下一次重置时间
+   * @tags admin-billing
+   * @name BillingWeeklyQuotaResetTimePartialUpdate
+   * @request PATCH:/admin/billing/weekly-quota/reset-time
+   * @secure
+   */
+  export namespace BillingWeeklyQuotaResetTimePartialUpdate {
+    export type RequestParams = {};
+    export type RequestQuery = {};
+    export type RequestBody = UpdateWeeklyQuotaResetTimeRequest;
+    export type RequestHeaders = {};
+    export type ResponseBody = WeeklyQuotaCycleResponseDoc;
+  }
+
+  /**
+   * @description 手动重置每周额度
+   * @tags admin-billing
+   * @name BillingWeeklyQuotaResetCreate
+   * @request POST:/admin/billing/weekly-quota/reset
+   * @secure
+   */
+  export namespace BillingWeeklyQuotaResetCreate {
+    export type RequestParams = {};
+    export type RequestQuery = {};
+    export type RequestBody = never;
+    export type RequestHeaders = {};
+    export type ResponseBody = WeeklyQuotaCycleResponseDoc;
   }
 
   /**

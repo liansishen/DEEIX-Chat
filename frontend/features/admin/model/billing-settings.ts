@@ -46,6 +46,7 @@ export type PlanFormState = {
   amount: string;
   billingInterval: string;
   periodCredit: string;
+  weeklyCredit: string;
   discountPercent: string;
   permissionGroupID: string;
 };
@@ -275,6 +276,7 @@ export function createPlanFormState(plan: AdminBillingPlanDTO, defaultPermission
     amount: String((defaultPrice?.amountCents ?? 0) / 100),
     billingInterval: defaultPrice?.billingInterval || "month",
     periodCredit: String(plan.periodCreditUSD ?? 0),
+    weeklyCredit: String(plan.weeklyCreditUSD ?? 0),
     discountPercent: String(plan.discountPercent ?? 0),
     permissionGroupID,
   };

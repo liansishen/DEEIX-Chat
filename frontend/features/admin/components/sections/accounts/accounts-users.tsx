@@ -354,7 +354,7 @@ const UserTableRow = React.memo(function UserTableRow({
           </Combobox>
         </div>
       </TableCell>
-      {billingMode === "period" ? (
+      {(billingMode === "period" || billingMode === "weekly") ? (
         <TableCell className="text-foreground">
           <div
             className="max-w-[10rem] truncate"
@@ -368,7 +368,7 @@ const UserTableRow = React.memo(function UserTableRow({
           </div>
         </TableCell>
       ) : null}
-      {billingMode !== "self" ? (
+      {billingMode !== "self" && billingMode !== "weekly" ? (
         <TableCell className="whitespace-nowrap text-foreground">
           <span title={resolveBillingAccountStatusLabel(item.billingAccountStatus || "active")}>
             {formatBillingBalance(item.billingBalanceUSD, billingDisplay)}
@@ -593,9 +593,9 @@ export function AccountsUsers({
     }
   }
 
-  const showBalanceColumn = billingMode !== "self";
+  const showBalanceColumn = billingMode !== "self" && billingMode !== "weekly";
   const baseColumnCount = 9;
-  const billingColumnCount = (billingMode === "period" ? 1 : 0) + (showBalanceColumn ? 1 : 0);
+  const billingColumnCount = ((billingMode === "period" || billingMode === "weekly") ? 1 : 0) + (showBalanceColumn ? 1 : 0);
   const tableColSpan = baseColumnCount + billingColumnCount;
 
   return (
@@ -630,7 +630,7 @@ export function AccountsUsers({
                 ...USER_STATUS_OPTIONS.map((item) => ({ label: resolveUserStatusLabel(item), value: item })),
               ],
             },
-            ...(billingMode === "period"
+            ...((billingMode === "period" || billingMode === "weekly")
               ? [
                   {
                     key: "tier",
@@ -812,7 +812,7 @@ export function AccountsUsers({
                 <TableHead>{t("fields.info")}</TableHead>
                 <TableHead>{t("fields.role")}</TableHead>
                 <TableHead>{t("fields.status")}</TableHead>
-                {billingMode === "period" ? <TableHead>{t("fields.subscription")}</TableHead> : null}
+                {(billingMode === "period" || billingMode === "weekly") ? <TableHead>{t("fields.subscription")}</TableHead> : null}
                 {showBalanceColumn ? <TableHead>{t("fields.balance")}</TableHead> : null}
                 <TableHead className="text-center">2FA</TableHead>
                 <TableHead>{t("fields.timezone")}</TableHead>

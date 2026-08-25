@@ -14,7 +14,7 @@ import { SpinnerLabel } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { invalidateAdminReferenceDataCache, patchAdminBillingConfig, patchAdminSettings } from "@/features/admin/api";
+import { getAdminWeeklyQuotaCycle, invalidateAdminReferenceDataCache, patchAdminBillingConfig, patchAdminSettings, resetAdminWeeklyQuota, updateAdminWeeklyQuotaResetTime } from "@/features/admin/api";
 import type { AdminBillingConfigDTO, AdminBillingMode } from "@/features/admin/api/billing.types";
 import { resolveAdminErrorMessage } from "@/features/admin/utils/admin-error";
 import {
@@ -68,6 +68,8 @@ export function BillingConfigSection({
   const tCommonErrors = useTranslations("common.errors");
   const tInput = useTranslations("common.input");
   const [saving, setSaving] = React.useState(false);
+  const [weeklyResetAt, setWeeklyResetAt] = React.useState("");
+  const [weeklyResetSaving, setWeeklyResetSaving] = React.useState(false);
   const [paymentTab, setPaymentTab] = React.useState<PaymentProvider>("stripe");
   const [billingUsdToCnyRate, setBillingUsdToCnyRate] = React.useState("7.2");
   const [savedBillingUsdToCnyRate, setSavedBillingUsdToCnyRate] = React.useState("7.2");
@@ -76,6 +78,33 @@ export function BillingConfigSection({
   const stripeWebhookEndpoint = React.useMemo(() => `${resolveApiBaseURL()}/api/v1/billing/payments/stripe/webhook`, []);
 
   const billingMode = billingConfig?.mode ?? "self";
+
+  React.useEffect(() => {
+    const next = billingConfig?.weeklyNextResetAt;
+    if (next) setWeeklyResetAt(next.slice(0, 16));
+    if (billingMode !== "weekly") return;
+    void resolveAccessToken().then((token) => token ? getAdminWeeklyQuotaCycle(token).then((data) => setWeeklyResetAt(data.cycle.endAt.slice(0, 16))).catch(() => undefined) : undefined);
+  }, [billingConfig?.weeklyNextResetAt, billingMode]);
+
+  async function saveWeeklyResetTime() {
+    if (!weeklyResetAt || !window.confirm(t("billingConfig.weeklyResetConfirm"))) return;
+    setWeeklyResetSaving(true);
+    try {
+      const token = await resolveAccessToken();
+      if (!token) return;
+      await updateAdminWeeklyQuotaResetTime(token, { nextResetAt: new Date(weeklyResetAt).toISOString() });
+      toast.success(t("toast.weeklyResetSaved"));
+    } catch (error) { toast.error(t("toast.weeklyResetFailed"), { description: resolveAdminErrorMessage(error) }); }
+    finally { setWeeklyResetSaving(false); }
+  }
+
+  async function manualWeeklyReset() {
+    if (!window.confirm(t("billingConfig.weeklyManualResetConfirm"))) return;
+    setWeeklyResetSaving(true);
+    try { const token = await resolveAccessToken(); if (!token) return; const data = await resetAdminWeeklyQuota(token); setWeeklyResetAt(data.cycle.endAt.slice(0, 16)); toast.success(t("toast.weeklyResetCompleted")); }
+    catch (error) { toast.error(t("toast.weeklyResetFailed"), { description: resolveAdminErrorMessage(error) }); }
+    finally { setWeeklyResetSaving(false); }
+  }
   const billingDisplayCurrency = billingConfig?.displayCurrency === "CNY" ? "CNY" : "USD";
   const billingPrepaidAmountUSD = billingConfig?.prepaidAmountUSD;
   const billingUsdToCNYRate = billingConfig?.usdToCNYRate;
@@ -277,6 +306,7 @@ export function BillingConfigSection({
                   <SelectContent align="end">
                     <SelectItem value="self">{t("billingConfig.modes.self")}</SelectItem>
                     <SelectItem value="period">{t("billingConfig.modes.period")}</SelectItem>
+                    <SelectItem value="weekly">{t("billingConfig.modes.weekly")}</SelectItem>
                     <SelectItem value="usage">{t("billingConfig.modes.usage")}</SelectItem>
                   </SelectContent>
                 </Select>
@@ -346,6 +376,17 @@ export function BillingConfigSection({
           ) : null}
         </SettingsFieldList>
       </SettingsSection>
+
+      {billingMode === "weekly" ? (
+        <section className="space-y-4 px-1">
+          <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">{t("billingConfig.weeklyResetTitle")}</h3><span className="text-xs text-muted-foreground">UTC</span></div>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-56 space-y-1"><label className="text-xs text-muted-foreground" htmlFor="weekly-reset-at">{t("billingConfig.weeklyNextReset")}</label><Input id="weekly-reset-at" type="datetime-local" value={weeklyResetAt} disabled={weeklyResetSaving || loading} onChange={(event) => setWeeklyResetAt(event.target.value)} /></div>
+            <Button type="button" size="sm" disabled={weeklyResetSaving || loading} onClick={() => void saveWeeklyResetTime()}>{tActions("save")}</Button>
+            <Button type="button" variant="outline" size="sm" disabled={weeklyResetSaving || loading} onClick={() => void manualWeeklyReset()}>{t("billingConfig.weeklyManualReset")}</Button>
+          </div>
+        </section>
+      ) : null}
 
       <Separator className="mx-1 my-10" />
 

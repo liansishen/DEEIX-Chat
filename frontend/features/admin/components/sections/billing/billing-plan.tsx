@@ -50,6 +50,7 @@ export function BillingPlanSection({ plans, setPlans, permissionGroups, loading 
         currency: "USD",
         billingInterval: planForm.billingInterval,
         periodCreditUSD: parsePrice(planForm.periodCredit),
+        weeklyCreditUSD: parsePrice(planForm.weeklyCredit),
         discountPercent: Math.min(100, parseIntValue(planForm.discountPercent)),
         permissionGroupID: Number(planForm.permissionGroupID) || undefined,
       });

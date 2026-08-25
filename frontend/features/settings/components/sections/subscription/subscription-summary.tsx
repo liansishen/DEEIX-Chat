@@ -30,7 +30,7 @@ import {
 } from "@/features/settings/model/subscription-format";
 import type { BillingDisplayOptions } from "@/shared/lib/billing-display";
 
-type BillingMode = "period" | "usage" | "self";
+type BillingMode = "period" | "weekly" | "usage" | "self";
 type PaymentProvider = "stripe" | "epay";
 type BillingAccount = NonNullable<BillingOverviewData["overview"]>["account"];
 
@@ -202,6 +202,11 @@ type SubscriptionSummaryProps = {
   periodCredit: number;
   periodUsed: number;
   periodPercent: number;
+  weeklyCredit: number;
+  weeklyUsed: number;
+  weeklyRemaining: number;
+  weeklyExhausted: boolean;
+  weeklyNextResetAt: string | null;
   billingDisplay: BillingDisplayOptions;
   onOpenRedemptionDialog: () => void;
   onOpenTopUpDialog: () => void;
@@ -288,7 +293,7 @@ export function SubscriptionSummary({
 
   return (
     <>
-      {billingMode === "period" ? (
+      {(billingMode === "period" || billingMode === "weekly") ? (
         <section className="space-y-6 px-0.5 md:space-y-7 xl:space-y-8 xl:px-1">
           <div className="space-y-4 md:space-y-5">
             <div className="flex items-start justify-between gap-3 md:gap-4">
@@ -324,36 +329,42 @@ export function SubscriptionSummary({
           <div className="space-y-3 rounded-md bg-muted/35 p-3 md:space-y-4">
             <div className="flex items-start justify-between gap-3 md:gap-4">
               <div className="space-y-1">
-                <p className="text-xs font-medium">{t("periodUsage.title")}</p>
+                <p className="text-xs font-medium">{t(billingMode === "weekly" ? "weeklyUsage.title" : "periodUsage.title")}</p>
                 <p className="text-xs text-muted-foreground">
-                  {billingOverview?.periodStartAt && billingOverview?.periodEndAt
-                    ? `${formatShortDate(billingOverview.periodStartAt, locale)} - ${formatShortDate(billingOverview.periodEndAt, locale)}`
-                    : t("periodUsage.currentPeriod")}
+                  {billingMode === "weekly"
+                    ? (weeklyNextResetAt ? `${t("weeklyUsage.nextReset")}: ${formatShortDate(weeklyNextResetAt, locale)}` : t("weeklyUsage.currentCycle"))
+                    : billingOverview?.periodStartAt && billingOverview?.periodEndAt
+                      ? `${formatShortDate(billingOverview.periodStartAt, locale)} - ${formatShortDate(billingOverview.periodEndAt, locale)}`
+                      : t("periodUsage.currentPeriod")}
                 </p>
               </div>
               <p className="shrink-0 text-xs font-medium text-muted-foreground">{Math.round(periodPercent)}%</p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-4 text-xs">
-                <span className="text-muted-foreground">{t("periodUsage.used", { value: formatPlanCredit(periodUsed, billingDisplay) })}</span>
-                <span className="text-muted-foreground">{t("periodUsage.total", { value: formatPlanCredit(periodCredit, billingDisplay) })}</span>
+                <span className="text-muted-foreground">{t(billingMode === "weekly" ? "weeklyUsage.used" : "periodUsage.used", { value: formatPlanCredit(billingMode === "weekly" ? weeklyUsed : periodUsed, billingDisplay) })}</span>
+                <span className="text-muted-foreground">{t(billingMode === "weekly" ? "weeklyUsage.total" : "periodUsage.total", { value: formatPlanCredit(billingMode === "weekly" ? weeklyCredit : periodCredit, billingDisplay) })}</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full bg-foreground/70" style={{ width: `${periodPercent}%` }} />
+                <div className="h-full rounded-full bg-foreground/70" style={{ width: `${billingMode === "weekly" ? (weeklyCredit > 0 ? Math.min(100, Math.max(0, (weeklyUsed / weeklyCredit) * 100)) : 0) : periodPercent}%` }} />
               </div>
             </div>
           </div>
 
-          <ActionRow
-            title={t("periodOverage.title")}
-            value={t("periodOverage.balance", { value: formatAccountBalance(billingAccount?.balanceUSD ?? 0, billingDisplay) })}
-            action={
-              <Button type="button" variant="outline" disabled={billingLoading || topUpLoading || paymentDisabled} onClick={onOpenTopUpDialog}>
-                <Banknote className="size-3.5" />
-                {t("usageBilling.topUp")}
-              </Button>
-            }
-          />
+          {billingMode === "weekly" ? (
+            <ValueRow title={t("weeklyUsage.remaining")} value={formatPlanCredit(weeklyRemaining, billingDisplay)} />
+          ) : (
+            <ActionRow
+              title={t("periodOverage.title")}
+              value={t("periodOverage.balance", { value: formatAccountBalance(billingAccount?.balanceUSD ?? 0, billingDisplay) })}
+              action={
+                <Button type="button" variant="outline" disabled={billingLoading || topUpLoading || paymentDisabled} onClick={onOpenTopUpDialog}>
+                  <Banknote className="size-3.5" />
+                  {t("usageBilling.topUp")}
+                </Button>
+              }
+            />
+          )}
         </section>
       ) : null}
 
