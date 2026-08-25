@@ -159,7 +159,13 @@
       "status": "Status",
       "expiresAt": "Expiry"
     },
-    "weeklyReward": "Weekly subscription · {plan} · {count} month(s)"
+    "weeklyReward": "Weekly subscription · {plan} · {count} month(s)",
+    "durationPreset": "Duration",
+    "durationPresets": {
+      "month": "1 month",
+      "quarter": "1 quarter",
+      "year": "1 year"
+    }
   },
   "modelPricing": {
     "title": "Model pricing",
@@ -339,7 +345,8 @@
     "redemptionDeleteSummary": "Deleted {successCount}, not found {notFoundCount}, failed {failedCount}.",
     "weeklyResetSaved": "Weekly quota reset time saved",
     "weeklyResetCompleted": "Weekly quotas reset",
-    "weeklyResetFailed": "Failed to update weekly quota reset"
+    "weeklyResetFailed": "Failed to update weekly quota reset",
+    "weeklyResetFutureRequired": "Choose a future UTC reset time."
   },
   "importErrors": {
     "invalidJSON": "File content is not valid JSON",

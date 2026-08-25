@@ -333,7 +333,7 @@ export function useAdminUsersPage({
   }, []);
 
   React.useEffect(() => {
-    if (billingMode !== "period") {
+    if (billingMode !== "period" && billingMode !== "weekly") {
       setTierFilter("");
       return;
     }
@@ -476,7 +476,7 @@ export function useAdminUsersPage({
           locale: createPayload.locale.trim(),
           subscriptionTier: (billingMode === "period" || billingMode === "weekly") ? createPayload.subscriptionTier : undefined,
           subscriptionExpiresAt:
-            billingMode !== "period" || createPayload.subscriptionTier === "free" || !createPayload.subscriptionExpiresAt.trim()
+            billingMode !== "period" && billingMode !== "weekly" || createPayload.subscriptionTier === "free" || !createPayload.subscriptionExpiresAt.trim()
               ? undefined
               : resolveSubscriptionExpiryISO(createPayload.subscriptionExpiresAt),
         });
@@ -624,11 +624,11 @@ export function useAdminUsersPage({
     }
 
     const billingBalanceChanged =
-      billingMode !== "self" &&
+      billingMode !== "self" && billingMode !== "weekly" &&
       Number.isFinite(nextBillingBalance) &&
       roundBillingBalance(nextBillingBalance) !== roundBillingBalance(editDialogTarget.billingBalanceUSD ?? 0);
 
-    if (billingMode !== "self" && !Number.isFinite(nextBillingBalance)) {
+    if (billingMode !== "self" && billingMode !== "weekly" && !Number.isFinite(nextBillingBalance)) {
       toast.error(t("toast.editFailed"), { description: t("validation.invalidUsageBalance") });
       return;
     }

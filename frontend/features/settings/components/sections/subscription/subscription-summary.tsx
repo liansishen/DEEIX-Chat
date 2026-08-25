@@ -250,6 +250,11 @@ export function SubscriptionSummary({
   periodCredit,
   periodUsed,
   periodPercent,
+  weeklyCredit,
+  weeklyUsed,
+  weeklyRemaining,
+  weeklyExhausted,
+  weeklyNextResetAt,
   billingDisplay,
   onOpenRedemptionDialog,
   onOpenTopUpDialog,
@@ -338,7 +343,7 @@ export function SubscriptionSummary({
                       : t("periodUsage.currentPeriod")}
                 </p>
               </div>
-              <p className="shrink-0 text-xs font-medium text-muted-foreground">{Math.round(periodPercent)}%</p>
+              <p className="shrink-0 text-xs font-medium text-muted-foreground">{Math.round(billingMode === "weekly" ? (weeklyCredit > 0 ? Math.min(100, Math.max(0, (weeklyUsed / weeklyCredit) * 100)) : 0) : periodPercent)}%</p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-4 text-xs">
@@ -352,7 +357,10 @@ export function SubscriptionSummary({
           </div>
 
           {billingMode === "weekly" ? (
-            <ValueRow title={t("weeklyUsage.remaining")} value={formatPlanCredit(weeklyRemaining, billingDisplay)} />
+            <div className="space-y-1">
+              <ValueRow title={t("weeklyUsage.remaining")} value={formatPlanCredit(weeklyRemaining, billingDisplay)} />
+              <p className={weeklyExhausted ? "text-xs font-medium text-destructive" : "text-xs text-muted-foreground"}>{weeklyExhausted ? t("weeklyUsage.exhausted") : t("weeklyUsage.available")}</p>
+            </div>
           ) : (
             <ActionRow
               title={t("periodOverage.title")}

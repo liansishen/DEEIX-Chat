@@ -661,7 +661,9 @@
       "nextReset": "下次重置",
       "used": "已使用 {value}",
       "total": "额度 {value}",
-      "remaining": "剩余 {value}"
+      "remaining": "剩余 {value}",
+      "exhausted": "额度已用尽",
+      "available": "额度可用"
     }
   }
 }

@@ -78,21 +78,37 @@ export function BillingConfigSection({
   const stripeWebhookEndpoint = React.useMemo(() => `${resolveApiBaseURL()}/api/v1/billing/payments/stripe/webhook`, []);
 
   const billingMode = billingConfig?.mode ?? "self";
+  const formatUTCDateTimeInput = React.useCallback((value: string) => {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 16);
+  }, []);
+  const parseUTCDateTimeInput = React.useCallback((value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
+    const parsed = new Date(`${value}:00Z`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }, []);
 
   React.useEffect(() => {
     const next = billingConfig?.weeklyNextResetAt;
-    if (next) setWeeklyResetAt(next.slice(0, 16));
+    if (next) setWeeklyResetAt(formatUTCDateTimeInput(next));
     if (billingMode !== "weekly") return;
-    void resolveAccessToken().then((token) => token ? getAdminWeeklyQuotaCycle(token).then((data) => setWeeklyResetAt(data.cycle.endAt.slice(0, 16))).catch(() => undefined) : undefined);
-  }, [billingConfig?.weeklyNextResetAt, billingMode]);
+    void resolveAccessToken().then((token) => token ? getAdminWeeklyQuotaCycle(token).then((data) => setWeeklyResetAt(formatUTCDateTimeInput(data.cycle.endAt))).catch(() => undefined) : undefined);
+  }, [billingConfig?.weeklyNextResetAt, billingMode, formatUTCDateTimeInput]);
 
   async function saveWeeklyResetTime() {
-    if (!weeklyResetAt || !window.confirm(t("billingConfig.weeklyResetConfirm"))) return;
+    const nextReset = parseUTCDateTimeInput(weeklyResetAt);
+    if (!nextReset || nextReset.getTime() <= Date.now()) {
+      toast.error(t("toast.weeklyResetFutureRequired"));
+      return;
+    }
+    if (!window.confirm(t("billingConfig.weeklyResetConfirm"))) return;
     setWeeklyResetSaving(true);
     try {
       const token = await resolveAccessToken();
       if (!token) return;
-      await updateAdminWeeklyQuotaResetTime(token, { nextResetAt: new Date(weeklyResetAt).toISOString() });
+      const data = await updateAdminWeeklyQuotaResetTime(token, { nextResetAt: nextReset.toISOString() });
+      setWeeklyResetAt(formatUTCDateTimeInput(data.cycle.endAt));
+      setBillingConfig((current) => current ? { ...current, weeklyNextResetAt: data.cycle.endAt } : current);
       toast.success(t("toast.weeklyResetSaved"));
     } catch (error) { toast.error(t("toast.weeklyResetFailed"), { description: resolveAdminErrorMessage(error) }); }
     finally { setWeeklyResetSaving(false); }
@@ -101,7 +117,7 @@ export function BillingConfigSection({
   async function manualWeeklyReset() {
     if (!window.confirm(t("billingConfig.weeklyManualResetConfirm"))) return;
     setWeeklyResetSaving(true);
-    try { const token = await resolveAccessToken(); if (!token) return; const data = await resetAdminWeeklyQuota(token); setWeeklyResetAt(data.cycle.endAt.slice(0, 16)); toast.success(t("toast.weeklyResetCompleted")); }
+    try { const token = await resolveAccessToken(); if (!token) return; const data = await resetAdminWeeklyQuota(token); setWeeklyResetAt(formatUTCDateTimeInput(data.cycle.endAt)); setBillingConfig((current) => current ? { ...current, weeklyNextResetAt: data.cycle.endAt } : current); toast.success(t("toast.weeklyResetCompleted")); }
     catch (error) { toast.error(t("toast.weeklyResetFailed"), { description: resolveAdminErrorMessage(error) }); }
     finally { setWeeklyResetSaving(false); }
   }

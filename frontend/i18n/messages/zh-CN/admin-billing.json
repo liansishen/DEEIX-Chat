@@ -156,7 +156,13 @@
       "status": "状态",
       "expiresAt": "过期"
     },
-    "weeklyReward": "每周订阅 · {plan} · {count}个月"
+    "weeklyReward": "每周订阅 · {plan} · {count}个月",
+    "durationPreset": "时长",
+    "durationPresets": {
+      "month": "1个月",
+      "quarter": "1季度",
+      "year": "1年"
+    }
   },
   "modelPricing": {
     "title": "模型定价",
@@ -336,7 +342,8 @@
     "redemptionDeleteSummary": "成功 {successCount} 个，未找到 {notFoundCount} 个，失败 {failedCount} 个。",
     "weeklyResetSaved": "每周额度重置时间已保存",
     "weeklyResetCompleted": "每周额度已重置",
-    "weeklyResetFailed": "更新每周额度重置失败"
+    "weeklyResetFailed": "更新每周额度重置失败",
+    "weeklyResetFutureRequired": "请选择未来的 UTC 重置时间。"
   },
   "importErrors": {
     "invalidJSON": "文件内容不是合法 JSON",

@@ -660,15 +660,20 @@ export function BillingRedemptionSection({ plans, billingMode, loading }: Billin
         })()
         : await (async () => {
           const planID = parseRequiredPositiveInt(redemptionForm.planID);
-          const durationDays = parseRequiredPositiveInt(redemptionForm.durationDays);
-          if (!planID || !durationDays) {
+          const durationDays = redemptionForm.mode === "weekly" ? 0 : parseRequiredPositiveInt(redemptionForm.durationDays);
+          if (!planID || (redemptionForm.mode !== "weekly" && !durationDays)) {
             throw new Error(!planID ? t("toast.redemptionInvalidPlan") : t("toast.redemptionInvalidDuration"));
           }
-          return createAdminRedemptionCodes(token, {
+          return createAdminRedemptionCodes(token, redemptionForm.mode === "weekly" ? {
+            ...payload,
+            mode: "weekly",
+            planID,
+            durationUnit: "month",
+            durationCount: Number(redemptionForm.durationCount) as 1 | 3 | 12,
+          } : {
             ...payload,
             planID,
-            durationDays,
-            ...(redemptionForm.mode === "weekly" ? { durationUnit: redemptionForm.durationUnit, durationCount: Number(redemptionForm.durationCount) as 1 | 3 | 12 } : {}),
+            durationDays: durationDays as number,
           });
         })();
       const created = data.results ?? [];
@@ -1060,7 +1065,7 @@ export function BillingRedemptionSection({ plans, billingMode, loading }: Billin
                       value={redemptionDialogForm.mode}
                       disabled={redemptionSaving || Boolean(redemptionDialogForm.id)}
                       onValueChange={(value) => {
-                        const mode = value === "period" ? "period" : "usage";
+                        const mode = value === "weekly" ? "weekly" : value === "period" ? "period" : "usage";
                         setRedemptionForm((current) => current ? {
                           ...current,
                           mode,
@@ -1127,23 +1132,24 @@ export function BillingRedemptionSection({ plans, billingMode, loading }: Billin
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">{t("redemption.durationDays")}</p>
-                      <Input
-                        id="redemption-duration"
-                        type="number"
-                        min={1}
-                        value={redemptionDialogForm.durationDays}
-                        disabled={redemptionSaving || Boolean(redemptionDialogForm.id)}
-                        onChange={(event) => setRedemptionForm((current) => current ? { ...current, durationDays: event.target.value } : current)}
-                      />
-                      {redemptionDialogForm.mode === "weekly" ? (
+                    {redemptionDialogForm.mode === "weekly" ? (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">{t("redemption.durationPreset")}</p>
                         <Select value={redemptionDialogForm.durationCount} onValueChange={(value) => setRedemptionForm((current) => current ? { ...current, durationCount: value as "1" | "3" | "12" } : current)} disabled={redemptionSaving || Boolean(redemptionDialogForm.id)}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent><SelectItem value="1">1 month</SelectItem><SelectItem value="3">1 quarter</SelectItem><SelectItem value="12">1 year</SelectItem></SelectContent>
+                          <SelectContent>
+                            <SelectItem value="1">{t("redemption.durationPresets.month")}</SelectItem>
+                            <SelectItem value="3">{t("redemption.durationPresets.quarter")}</SelectItem>
+                            <SelectItem value="12">{t("redemption.durationPresets.year")}</SelectItem>
+                          </SelectContent>
                         </Select>
-                      ) : null}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">{t("redemption.durationDays")}</p>
+                        <Input id="redemption-duration" type="number" min={1} value={redemptionDialogForm.durationDays} disabled={redemptionSaving || Boolean(redemptionDialogForm.id)} onChange={(event) => setRedemptionForm((current) => current ? { ...current, durationDays: event.target.value } : current)} />
+                      </div>
+                    )}
                   </div>
                 )}
 
