@@ -47,10 +47,12 @@ type SubscriptionEntitlementQueueLabels = {
   upcoming: string;
   range: (start: string, end: string) => string;
   credit: (credit: string) => string;
+  weeklyCredit: (credit: string) => string;
 };
 
 type PlanFeatureLabels = {
   monthlyCredit: (credit: string) => string;
+  weeklyCredit: (credit: string) => string;
   freeModelsNotIncluded: string;
 };
 
@@ -127,11 +129,13 @@ function SubscriptionEntitlementQueue({
   labels,
   locale,
   billingDisplay,
+  billingMode,
 }: {
   items: BillingSubscriptionEntitlementDTO[];
   labels: SubscriptionEntitlementQueueLabels;
   locale: string;
   billingDisplay: BillingDisplayOptions;
+  billingMode: BillingMode;
 }) {
   if (items.length === 0) {
     return null;
@@ -157,7 +161,7 @@ function SubscriptionEntitlementQueue({
               {index > 0 ? <span className="text-muted-foreground/50">/</span> : null}
               <span
                 className={item.isCurrent ? "font-medium text-foreground" : undefined}
-                title={`${labels.range(start, end)} · ${labels.credit(formatPlanCredit(item.plan.periodCreditUSD, billingDisplay))}`}
+                title={`${labels.range(start, end)} · ${(billingMode === "weekly" ? labels.weeklyCredit : labels.credit)(formatPlanCredit(billingMode === "weekly" ? item.plan.weeklyCreditUSD : item.plan.periodCreditUSD, billingDisplay))}`}
               >
                 {item.plan.name || item.plan.code}
               </span>
@@ -306,7 +310,7 @@ export function SubscriptionSummary({
                 <p className="text-xs font-medium">{t("currentSubscription.title")}</p>
                 <p className="truncate text-sm font-semibold">{currentPlan?.name ?? t("currentSubscription.none")}</p>
                 <p className="text-xs text-muted-foreground">
-                  {currentPlan ? `${formatPlanPrice(currentPrice, intervalLabels, billingDisplay)} · ${t("plans.features.monthlyCredit", { credit: formatPlanCredit(periodCredit, billingDisplay) })}` : t("currentSubscription.empty")}
+                  {currentPlan ? `${formatPlanPrice(currentPrice, intervalLabels, billingDisplay)} · ${t(billingMode === "weekly" ? "plans.features.weeklyCredit" : "plans.features.monthlyCredit", { credit: formatPlanCredit(billingMode === "weekly" ? weeklyCredit : periodCredit, billingDisplay) })}` : t("currentSubscription.empty")}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
@@ -327,6 +331,7 @@ export function SubscriptionSummary({
             labels={entitlementLabels}
             locale={locale}
             billingDisplay={billingDisplay}
+            billingMode={billingMode}
           />
 
           <Separator />
@@ -458,7 +463,7 @@ export function SubscriptionSummary({
               const actionKind = resolvePlanActionKind(plan, price, isCurrent, currentPlan, protectedPaidPlanRank);
               const actionLabel = resolvePlanActionLabel(actionKind, planActionLabels);
               const disabled = billingLoading || actionKind === "current" || actionKind === "freeBlocked" || actionKind === "unavailable" || checkoutPriceID === price?.id;
-              const features = resolvePlanFeatures(plan, planFeatureLabels, billingDisplay).slice(0, 6);
+              const features = resolvePlanFeatures(plan, planFeatureLabels, billingDisplay, billingMode === "weekly" ? "weekly" : "period").slice(0, 6);
               const isSelected = selectedPlan?.id === plan.id;
               const isHighlighted = isCurrent || isSelected;
               const buttonVariant = resolvePlanButtonVariant(actionKind);

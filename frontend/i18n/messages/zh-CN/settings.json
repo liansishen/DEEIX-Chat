@@ -492,7 +492,8 @@
       "current": "当前",
       "upcoming": "待生效",
       "range": "{start} - {end}",
-      "credit": "{credit} 额度"
+      "credit": "{credit} 额度",
+      "weeklyCredit": "{credit} 每周额度"
     },
     "usageBilling": {
       "title": "按量付费",
@@ -596,7 +597,8 @@
       },
       "features": {
         "monthlyCredit": "{credit} 月额度",
-        "freeModelsNotIncluded": "免费模型不计入额度"
+        "freeModelsNotIncluded": "免费模型不计入额度",
+        "weeklyCredit": "{credit} 每周额度"
       }
     },
     "payment": {

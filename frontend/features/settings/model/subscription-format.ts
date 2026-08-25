@@ -308,11 +308,14 @@ export function resolveEPayTypeLabel(type: string, labels: { alipay: string; wxp
 
 export function resolvePlanFeatures(
   plan: BillingPlanDTO,
-  labels: { monthlyCredit: (credit: string) => string; freeModelsNotIncluded: string },
+  labels: { monthlyCredit: (credit: string) => string; weeklyCredit: (credit: string) => string; freeModelsNotIncluded: string },
   billingDisplay: BillingDisplayOptions = DEFAULT_BILLING_DISPLAY,
+  billingMode: "period" | "weekly" = "period",
 ): string[] {
   const fallback = [
-    labels.monthlyCredit(formatPlanCredit(plan.periodCreditUSD, billingDisplay)),
+    billingMode === "weekly"
+      ? labels.weeklyCredit(formatPlanCredit(plan.weeklyCreditUSD, billingDisplay))
+      : labels.monthlyCredit(formatPlanCredit(plan.periodCreditUSD, billingDisplay)),
     labels.freeModelsNotIncluded,
   ];
   try {

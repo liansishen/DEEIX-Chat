@@ -492,7 +492,8 @@
       "current": "Current",
       "upcoming": "Upcoming",
       "range": "{start} - {end}",
-      "credit": "{credit} credit"
+      "credit": "{credit} credit",
+      "weeklyCredit": "{credit} weekly credit"
     },
     "usageBilling": {
       "title": "Usage billing",
@@ -596,7 +597,8 @@
       },
       "features": {
         "monthlyCredit": "{credit} monthly credit",
-        "freeModelsNotIncluded": "Free models do not count toward the credit."
+        "freeModelsNotIncluded": "Free models do not count toward the credit.",
+        "weeklyCredit": "{credit} weekly credit"
       }
     },
     "payment": {

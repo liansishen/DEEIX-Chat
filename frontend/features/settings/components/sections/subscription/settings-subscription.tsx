@@ -147,6 +147,7 @@ export function SettingsSubscription() {
   const planFeatureLabels = React.useMemo(
     () => ({
       monthlyCredit: (credit: string) => t("plans.features.monthlyCredit", { credit }),
+      weeklyCredit: (credit: string) => t("plans.features.weeklyCredit", { credit }),
       freeModelsNotIncluded: t("plans.features.freeModelsNotIncluded"),
     }),
     [t],
@@ -159,6 +160,7 @@ export function SettingsSubscription() {
       upcoming: t("entitlements.upcoming"),
       range: (start: string, end: string) => t("entitlements.range", { start, end }),
       credit: (credit: string) => t("entitlements.credit", { credit }),
+      weeklyCredit: (credit: string) => t("entitlements.weeklyCredit", { credit }),
     }),
     [t],
   );
