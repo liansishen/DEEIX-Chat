@@ -49,6 +49,7 @@ const DEFAULT_BILLING_CONFIG: AdminBillingConfigDTO = {
   usdToCNYRate: 7.2,
   displayCurrency: "USD",
   epayTypes: [],
+  weeklyNextResetAt: null,
 };
 
 export function useAdminBillingReference(): UseAdminBillingReferenceState {
