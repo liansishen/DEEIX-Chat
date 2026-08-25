@@ -240,34 +240,38 @@ type UsageBalanceReservationRequest struct {
 	RefNo               string
 	Mode                string
 	RequestedNanousd    int64
+	AuthorizedAt        time.Time
 	PeriodStartAt       *time.Time
 	PeriodEndAt         *time.Time
 	PeriodCreditNanousd int64
+	WeeklyCreditNanousd int64
 }
 
 // UsageBalanceReservation 表示一次模型调用的持久化预算预留。
 type UsageBalanceReservation struct {
-	ID                  uint
-	UserID              uint
-	RefNo               string
-	Mode                string
-	BalanceNanousd      int64
-	PeriodCreditNanousd int64
-	PeriodLimitNanousd  int64
-	PeriodStartAt       *time.Time
-	PeriodEndAt         *time.Time
-	WeeklyCycleID       uint
-	WeeklyCreditNanousd int64
-	WeeklyLimitNanousd  int64
-	Status              string
-	UsageLedgerID       uint
-	ExpiresAt           time.Time
-	SettledAt           *time.Time
-	ReleasedAt          *time.Time
-	ReconciliationAt    *time.Time
-	FailureCode         string
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	ID                   uint
+	UserID               uint
+	RefNo                string
+	Mode                 string
+	BalanceNanousd       int64
+	PeriodCreditNanousd  int64
+	PeriodLimitNanousd   int64
+	PeriodStartAt        *time.Time
+	PeriodEndAt          *time.Time
+	WeeklyCycleID        uint
+	WeeklyCreditNanousd  int64
+	WeeklyLimitNanousd   int64
+	Status               string
+	UsageLedgerID        uint
+	SettledNanousd       int64
+	SettledWeeklyCycleID uint
+	ExpiresAt            time.Time
+	SettledAt            *time.Time
+	ReleasedAt           *time.Time
+	ReconciliationAt     *time.Time
+	FailureCode          string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 // UsageAuthorization 表示一次上游调用在请求开始时确定的计费策略与可选预算预留。

@@ -23,6 +23,8 @@ const (
 	usageBillingRetryBaseDelay     = 100 * time.Millisecond
 	messageUsageBalanceErrorCode   = "billing.insufficient_funds"
 	messageUsageBalanceErrorText   = "insufficient balance"
+	messageWeeklyQuotaErrorCode    = "billing.weekly_quota_exceeded"
+	messageWeeklyQuotaErrorText    = "weekly quota is exhausted"
 )
 
 // SendMessageBillingInput 描述一次消息发送对应的计费上下文。
@@ -90,16 +92,22 @@ func (s *Service) PersistMessageUsageRejection(
 	if !shouldPersistMessageUsageRejection(authorizationErr) {
 		return nil
 	}
+	errorCode := messageUsageBalanceErrorCode
+	errorText := messageUsageBalanceErrorText
+	if errors.Is(authorizationErr, appbilling.ErrWeeklyCreditExceeded) {
+		errorCode = messageWeeklyQuotaErrorCode
+		errorText = messageWeeklyQuotaErrorText
+	}
 	return s.persistRejectedMessageSend(
 		ctx,
 		input,
-		messageUsageBalanceErrorCode,
-		messageUsageBalanceErrorText,
+		errorCode,
+		errorText,
 	)
 }
 
 func shouldPersistMessageUsageRejection(err error) bool {
-	return errors.Is(err, appbilling.ErrUsageBalanceInsufficient)
+	return errors.Is(err, appbilling.ErrUsageBalanceInsufficient) || errors.Is(err, appbilling.ErrWeeklyCreditExceeded)
 }
 
 // ReleaseSendMessageUsageAuthorization 在调用未产生可计费用量时释放预留预算。
@@ -233,6 +241,7 @@ func isRetryableUsageBillingError(err error) bool {
 		context.Canceled,
 		context.DeadlineExceeded,
 		appbilling.ErrUsageBalanceInsufficient,
+		appbilling.ErrWeeklyCreditExceeded,
 		appbilling.ErrUsageReservationConflict,
 		appbilling.ErrModelPricingRequired,
 		repository.ErrInvalidInput,
@@ -289,6 +298,13 @@ func (s *Service) buildSendMessageUsageLedger(ctx context.Context, input SendMes
 	if latencyMS <= 0 {
 		latencyMS = result.AssistantMessage.LatencyMS
 	}
+	billingAt := result.StartedAt
+	if authorization != nil && strings.TrimSpace(authorization.Mode) == "weekly" {
+		if result.CompletedAt.IsZero() {
+			result.CompletedAt = time.Now().UTC()
+		}
+		billingAt = result.CompletedAt
+	}
 	return s.billingSvc.BuildUsageLedger(ctx, appbilling.UsagePricingInput{
 		Authorization:       authorization,
 		UserID:              input.UserID,
@@ -319,7 +335,7 @@ func (s *Service) buildSendMessageUsageLedger(ctx context.Context, input SendMes
 		LatencyMS:           latencyMS,
 		ServerSideToolUsage: result.ServerSideToolUsage,
 		RawUsageJSON:        result.RawUsageJSON,
-		BillingAt:           result.StartedAt,
+		BillingAt:           billingAt,
 	})
 }
 

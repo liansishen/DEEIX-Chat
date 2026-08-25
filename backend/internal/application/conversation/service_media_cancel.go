@@ -93,6 +93,7 @@ func buildFailedMediaBillingResult(input failedMediaBillingResultInput) *SendMes
 		LatencyMS:          assistantMessage.LatencyMS,
 		DurationSeconds:    input.DurationSeconds,
 		StartedAt:          input.StartedAt,
+		CompletedAt:        time.Now().UTC(),
 	}
 }
 

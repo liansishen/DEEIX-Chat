@@ -86,3 +86,84 @@ func TestReserveUsageBalanceSerializesConcurrentPostgresRequests(t *testing.T) {
 		t.Fatalf("concurrent reserve results = success %d, limited %d; want %d/1", successCount, limitCount, domainbilling.UsageReservationMaxActivePerUser)
 	}
 }
+
+func TestReserveWeeklyUsageSerializesConcurrentPostgresRequests(t *testing.T) {
+	dsn := strings.TrimSpace(os.Getenv("DEEIX_TEST_DATABASE_DSN"))
+	if dsn == "" {
+		t.Skip("set DEEIX_TEST_DATABASE_DSN to run PostgreSQL billing concurrency integration test")
+	}
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open postgres: %v", err)
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("resolve postgres db: %v", err)
+	}
+	sqlDB.SetMaxOpenConns(8)
+	defer sqlDB.Close()
+	if err = db.AutoMigrate(
+		&model.UsageReservation{},
+		&model.BillingQuotaSchedule{},
+		&model.BillingQuotaCycle{},
+		&model.BillingWeeklyQuotaAccount{},
+	); err != nil {
+		t.Fatalf("migrate weekly billing tables: %v", err)
+	}
+
+	userID := uint(time.Now().UnixNano()%1_000_000_000) + 1
+	defer func() {
+		_ = db.Where("user_id = ?", userID).Delete(&model.UsageReservation{}).Error
+		_ = db.Where("user_id = ?", userID).Delete(&model.BillingWeeklyQuotaAccount{}).Error
+	}()
+
+	repo := NewRepo(db)
+	authorizedAt := time.Now().UTC()
+	start := make(chan struct{})
+	const requestCount = 4
+	results := make(chan error, requestCount)
+	var wg sync.WaitGroup
+	for index := 0; index < requestCount; index++ {
+		refNo := fmt.Sprintf("postgres_weekly_run_%d_%d", userID, index)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			_, reserveErr := repo.ReserveUsageBalance(context.Background(), domainbilling.UsageBalanceReservationRequest{
+				UserID:              userID,
+				RefNo:               refNo,
+				Mode:                "weekly",
+				RequestedNanousd:    30,
+				AuthorizedAt:        authorizedAt,
+				WeeklyCreditNanousd: 100,
+			})
+			results <- reserveErr
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+
+	var successCount int
+	var quotaCount int
+	for reserveErr := range results {
+		switch {
+		case reserveErr == nil:
+			successCount++
+		case errors.Is(reserveErr, repository.ErrWeeklyQuotaExceeded):
+			quotaCount++
+		default:
+			t.Fatalf("concurrent weekly reserve error = %v", reserveErr)
+		}
+	}
+	if successCount != 3 || quotaCount != 1 {
+		t.Fatalf("concurrent weekly reserve results = success %d, quota %d; want 3/1", successCount, quotaCount)
+	}
+	var account model.BillingWeeklyQuotaAccount
+	if err = db.Where("user_id = ?", userID).Order("id DESC").First(&account).Error; err != nil {
+		t.Fatalf("load weekly account: %v", err)
+	}
+	if account.UsedNanousd != 0 || account.ReservedNanousd != 90 {
+		t.Fatalf("weekly account counters = %d/%d, want 0/90", account.UsedNanousd, account.ReservedNanousd)
+	}
+}

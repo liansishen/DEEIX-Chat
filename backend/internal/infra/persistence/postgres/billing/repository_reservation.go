@@ -23,11 +23,17 @@ func (r *Repo) ReserveUsageBalance(ctx context.Context, input domainbilling.Usag
 	if input.UserID == 0 || input.RefNo == "" || input.RequestedNanousd < 0 {
 		return nil, repository.ErrInvalidInput
 	}
-	if input.Mode != "usage" && input.Mode != "period" {
+	if input.Mode != "usage" && input.Mode != "period" && input.Mode != "weekly" {
 		return nil, repository.ErrInvalidInput
 	}
 	if input.Mode == "period" && (input.PeriodStartAt == nil || input.PeriodEndAt == nil || !input.PeriodEndAt.After(*input.PeriodStartAt) || input.PeriodCreditNanousd < 0) {
 		return nil, repository.ErrInvalidInput
+	}
+	if input.Mode == "weekly" {
+		if input.WeeklyCreditNanousd <= 0 {
+			return nil, repository.ErrWeeklyQuotaExceeded
+		}
+		return r.reserveWeeklyUsage(ctx, input)
 	}
 
 	var result *domainbilling.UsageBalanceReservation
@@ -161,11 +167,17 @@ func (r *Repo) ReleaseUsageBalanceReservation(ctx context.Context, userID uint, 
 		if reservation.Status != domainbilling.UsageReservationStatusActive {
 			return nil
 		}
-		releasedAt := time.Now()
-		return translateError(tx.Model(&reservation).Updates(map[string]interface{}{
+		releasedAt := time.Now().UTC()
+		if err := tx.Model(&reservation).Updates(map[string]interface{}{
 			"status":      domainbilling.UsageReservationStatusReleased,
 			"released_at": releasedAt,
-		}).Error)
+		}).Error; err != nil {
+			return translateError(err)
+		}
+		if reservation.Mode == "weekly" {
+			return syncWeeklyQuotaReservedNanousd(tx, reservation.WeeklyCycleID, reservation.UserID, releasedAt)
+		}
+		return nil
 	})
 }
 
@@ -386,26 +398,28 @@ func remainingNonNegativeBudget(limit int64, consumed int64, reserved int64) int
 
 func toDomainUsageReservation(item model.UsageReservation) domainbilling.UsageBalanceReservation {
 	return domainbilling.UsageBalanceReservation{
-		ID:                  item.ID,
-		UserID:              item.UserID,
-		RefNo:               item.RefNo,
-		Mode:                item.Mode,
-		BalanceNanousd:      item.BalanceNanousd,
-		PeriodCreditNanousd: item.PeriodCreditNanousd,
-		PeriodLimitNanousd:  item.PeriodLimitNanousd,
-		PeriodStartAt:       item.PeriodStartAt,
-		PeriodEndAt:         item.PeriodEndAt,
-		WeeklyCycleID:       item.WeeklyCycleID,
-		WeeklyCreditNanousd: item.WeeklyCreditNanousd,
-		WeeklyLimitNanousd:  item.WeeklyLimitNanousd,
-		Status:              item.Status,
-		UsageLedgerID:       item.UsageLedgerID,
-		ExpiresAt:           item.ExpiresAt,
-		SettledAt:           item.SettledAt,
-		ReleasedAt:          item.ReleasedAt,
-		ReconciliationAt:    item.ReconciliationAt,
-		FailureCode:         item.FailureCode,
-		CreatedAt:           item.CreatedAt,
-		UpdatedAt:           item.UpdatedAt,
+		ID:                   item.ID,
+		UserID:               item.UserID,
+		RefNo:                item.RefNo,
+		Mode:                 item.Mode,
+		BalanceNanousd:       item.BalanceNanousd,
+		PeriodCreditNanousd:  item.PeriodCreditNanousd,
+		PeriodLimitNanousd:   item.PeriodLimitNanousd,
+		PeriodStartAt:        item.PeriodStartAt,
+		PeriodEndAt:          item.PeriodEndAt,
+		WeeklyCycleID:        item.WeeklyCycleID,
+		WeeklyCreditNanousd:  item.WeeklyCreditNanousd,
+		WeeklyLimitNanousd:   item.WeeklyLimitNanousd,
+		Status:               item.Status,
+		UsageLedgerID:        item.UsageLedgerID,
+		SettledNanousd:       item.SettledNanousd,
+		SettledWeeklyCycleID: item.SettledWeeklyCycleID,
+		ExpiresAt:            item.ExpiresAt,
+		SettledAt:            item.SettledAt,
+		ReleasedAt:           item.ReleasedAt,
+		ReconciliationAt:     item.ReconciliationAt,
+		FailureCode:          item.FailureCode,
+		CreatedAt:            item.CreatedAt,
+		UpdatedAt:            item.UpdatedAt,
 	}
 }

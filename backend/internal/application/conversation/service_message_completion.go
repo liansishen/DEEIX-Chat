@@ -562,6 +562,7 @@ func buildInterruptedSendMessageResult(input persistInterruptedMessageGeneration
 		ServerSideToolUsage: input.ServerSideToolUsage,
 		LatencyMS:           metrics.LatencyMS,
 		StartedAt:           input.StartedAt,
+		CompletedAt:         time.Now().UTC(),
 	}
 	if input.Route != nil {
 		result.UpstreamID = input.Route.UpstreamID

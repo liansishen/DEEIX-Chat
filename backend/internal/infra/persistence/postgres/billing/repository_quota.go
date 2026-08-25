@@ -130,29 +130,40 @@ func (r *Repo) GetOrCreateWeeklyQuotaAccount(ctx context.Context, cycleID uint, 
 	}
 	var result domainbilling.WeeklyQuotaAccount
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var cycle models.BillingQuotaCycle
-		if err := tx.Where("id = ?", cycleID).First(&cycle).Error; err != nil {
-			return translateError(err)
+		account, err := getOrCreateWeeklyQuotaAccountForUpdate(tx, cycleID, userID)
+		if err != nil {
+			return err
 		}
-		account := models.BillingWeeklyQuotaAccount{CycleID: cycleID, UserID: userID}
-		if err := tx.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "cycle_id"}, {Name: "user_id"}},
-			DoNothing: true,
-		}).Create(&account).Error; err != nil {
-			return translateError(err)
-		}
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("cycle_id = ? AND user_id = ?", cycleID, userID).
-			First(&account).Error; err != nil {
-			return translateError(err)
-		}
-		result = toDomainWeeklyQuotaAccount(account)
+		result = toDomainWeeklyQuotaAccount(*account)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &result, nil
+}
+
+func getOrCreateWeeklyQuotaAccountForUpdate(tx *gorm.DB, cycleID uint, userID uint) (*models.BillingWeeklyQuotaAccount, error) {
+	if cycleID == 0 || userID == 0 {
+		return nil, repository.ErrInvalidInput
+	}
+	var cycle models.BillingQuotaCycle
+	if err := tx.Where("id = ?", cycleID).First(&cycle).Error; err != nil {
+		return nil, translateError(err)
+	}
+	account := models.BillingWeeklyQuotaAccount{CycleID: cycleID, UserID: userID}
+	if err := tx.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "cycle_id"}, {Name: "user_id"}},
+		DoNothing: true,
+	}).Create(&account).Error; err != nil {
+		return nil, translateError(err)
+	}
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("cycle_id = ? AND user_id = ?", cycleID, userID).
+		First(&account).Error; err != nil {
+		return nil, translateError(err)
+	}
+	return &account, nil
 }
 
 func ensureWeeklyQuotaCycleForUpdate(tx *gorm.DB, now time.Time, initialResetAt time.Time) (*models.BillingQuotaCycle, bool, error) {

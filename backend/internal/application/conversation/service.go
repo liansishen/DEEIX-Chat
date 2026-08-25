@@ -17,6 +17,7 @@ import (
 	apprag "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/application/rag"
 	appskill "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/application/skill"
 	appupload "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/application/upload"
+	domainbilling "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/domain/billing"
 	model "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/domain/conversation"
 	domainknowledgebase "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/domain/knowledgebase"
 	domainmcp "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/domain/mcp"
@@ -185,6 +186,7 @@ type SendMessageInput struct {
 	SourceMessagePublicID   string
 	BranchReason            string
 	Cancelable              bool
+	UsageAuthorization      *domainbilling.UsageAuthorization
 	// OnEvent 用于向调用方推送中间事件（如 rag_search），流式场景使用。
 	OnEvent func(eventType string, payload map[string]interface{}) error
 }
@@ -222,6 +224,7 @@ type SendMessageResult struct {
 	LatencyMS           int64
 	DurationSeconds     int64
 	StartedAt           time.Time
+	CompletedAt         time.Time
 	// Moderation is set when a soft-moderation barrier ran; Blocked means withdrawn.
 	Moderation            *MessageModerationOutcome
 	postBillingCompaction *postBillingCompactionTask

@@ -593,6 +593,7 @@ func (s *Service) StreamMediaImage(ctx context.Context, input MediaImageInput) (
 		CacheWrite1hTokens:  usage.CacheWrite1hTokens,
 		LatencyMS:           latencyMS,
 		StartedAt:           startedAt,
+		CompletedAt:         time.Now().UTC(),
 	}
 	if moderationCoord != nil {
 		outputImages := loadOutputImagesFromFiles(moderationCoord, uploaded, generatedBytesByFileID)

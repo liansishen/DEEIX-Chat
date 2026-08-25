@@ -301,6 +301,10 @@ func handleSendMessageBillingError(c *gin.Context, err error) {
 		response.Error(c, http.StatusPaymentRequired, "usage balance is insufficient")
 		return
 	}
+	if errors.Is(err, billing.ErrWeeklyCreditExceeded) {
+		response.Error(c, http.StatusPaymentRequired, "weekly quota is exhausted")
+		return
+	}
 	if errors.Is(err, billing.ErrModelPricingRequired) {
 		response.Error(c, http.StatusPaymentRequired, "model pricing is required")
 		return
@@ -319,6 +323,10 @@ func handleUsageAuthorizationError(c *gin.Context, err error) {
 	}
 	if errors.Is(err, billing.ErrUsageBalanceInsufficient) {
 		response.Error(c, http.StatusPaymentRequired, "usage balance is insufficient")
+		return
+	}
+	if errors.Is(err, billing.ErrWeeklyCreditExceeded) {
+		response.Error(c, http.StatusPaymentRequired, "weekly quota is exhausted")
 		return
 	}
 	if errors.Is(err, billing.ErrModelPricingRequired) {
@@ -342,6 +350,10 @@ func mapBillingStreamError(err error) streamError {
 	if errors.Is(err, billing.ErrUsageBalanceInsufficient) {
 		status = http.StatusPaymentRequired
 		message = "usage balance is insufficient"
+	}
+	if errors.Is(err, billing.ErrWeeklyCreditExceeded) {
+		status = http.StatusPaymentRequired
+		message = "weekly quota is exhausted"
 	}
 	if errors.Is(err, billing.ErrModelPricingRequired) {
 		status = http.StatusPaymentRequired
@@ -446,6 +458,7 @@ func (h *Handler) SendMessage(c *gin.Context) {
 	}
 	stopAuthorizationRenewal := h.startUsageAuthorizationRenewal(authorization)
 	defer stopAuthorizationRenewal()
+	input.UsageAuthorization = authorization
 
 	result, err := h.service.SendMessage(c.Request.Context(), input)
 	if err != nil {
@@ -507,6 +520,7 @@ func (h *Handler) StreamMessage(c *gin.Context) {
 	}
 	stopAuthorizationRenewal := h.startUsageAuthorizationRenewal(authorization)
 	defer stopAuthorizationRenewal()
+	input.UsageAuthorization = authorization
 
 	c.Header("Content-Type", "application/x-ndjson; charset=utf-8")
 	c.Header("Cache-Control", "no-cache, no-transform")

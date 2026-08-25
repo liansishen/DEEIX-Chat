@@ -163,7 +163,7 @@ func TestUpdatePlanRejectsUnknownPermissionGroup(t *testing.T) {
 func TestUpdatePlanDefaultsPermissionGroup(t *testing.T) {
 	defaultGroupID := uint(7)
 	repo := &billingRepositoryStub{
-		plans: []domainbilling.Plan{{ID: 1, Code: "pro", Name: "Pro"}},
+		plans: []domainbilling.Plan{{ID: 1, Code: "pro", Name: "Pro", WeeklyCreditNanousd: 777}},
 	}
 	service := NewService(repo)
 	service.SetPermissionGroupLookup(permissionGroupLookupStub{
@@ -182,6 +182,9 @@ func TestUpdatePlanDefaultsPermissionGroup(t *testing.T) {
 	}
 	if repo.updatedPlan == nil || repo.updatedPlan.PermissionGroupID == nil || *repo.updatedPlan.PermissionGroupID != defaultGroupID {
 		t.Fatalf("updated plan PermissionGroupID = %v, want %d", repo.updatedPlan, defaultGroupID)
+	}
+	if view.WeeklyCreditNanousd != 777 || repo.updatedPlan.WeeklyCreditNanousd != 777 {
+		t.Fatalf("weekly credit changed during unrelated plan edit: view=%d plan=%d", view.WeeklyCreditNanousd, repo.updatedPlan.WeeklyCreditNanousd)
 	}
 }
 
@@ -229,6 +232,7 @@ type billingRepositoryStub struct {
 	reservationRequest         *domainbilling.UsageBalanceReservationRequest
 	reservationErr             error
 	periodUsageSettled         bool
+	weeklyUsageSettled         bool
 	usageSettled               bool
 	usageAdded                 bool
 	periodStartAt              time.Time
@@ -362,15 +366,21 @@ func (r *billingRepositoryStub) AddPeriodUsageAndSettleOverage(_ context.Context
 	r.periodCreditNanousd = periodCreditNanousd
 	return nil
 }
+func (r *billingRepositoryStub) AddWeeklyUsageAndSettleQuota(context.Context, *domainbilling.UsageLedger, *domainbilling.UsageBalanceReservation) error {
+	r.weeklyUsageSettled = true
+	return nil
+}
 func (r *billingRepositoryStub) ReserveUsageBalance(_ context.Context, input domainbilling.UsageBalanceReservationRequest) (*domainbilling.UsageBalanceReservation, error) {
 	r.reservationRequest = &input
 	if r.reservationErr != nil {
 		return nil, r.reservationErr
 	}
 	return &domainbilling.UsageBalanceReservation{
-		UserID: input.UserID,
-		RefNo:  input.RefNo,
-		Mode:   input.Mode,
+		UserID:              input.UserID,
+		RefNo:               input.RefNo,
+		Mode:                input.Mode,
+		WeeklyCreditNanousd: input.RequestedNanousd,
+		WeeklyLimitNanousd:  input.WeeklyCreditNanousd,
 	}, nil
 }
 func (r *billingRepositoryStub) RenewUsageBalanceReservation(context.Context, uint, string) error {
@@ -438,6 +448,194 @@ func (r *billingRepositoryStub) ListDailyUsageByUser(context.Context, uint, time
 }
 func (r *billingRepositoryStub) SumBillableNanousd(context.Context, uint, time.Time, time.Time) (int64, error) {
 	return 0, nil
+}
+
+func TestAuthorizeUsageWeeklyRequiresPaidSubscriptionAndSnapshotsLimit(t *testing.T) {
+	now := time.Now().UTC()
+	endAt := now.Add(30 * 24 * time.Hour)
+	repo := &billingRepositoryStub{
+		mode: "weekly",
+		pricing: &domainbilling.ModelPricing{
+			PlatformModelName:       "gpt-weekly",
+			InputNanousdPerMTokens:  1,
+			OutputNanousdPerMTokens: 1,
+		},
+		plans: []domainbilling.Plan{{
+			ID:                  2,
+			Code:                "pro",
+			WeeklyCreditNanousd: 5_000,
+			IsActive:            true,
+		}},
+		subscriptions: []domainbilling.Subscription{{
+			ID:                   10,
+			UserID:               1,
+			PlanID:               2,
+			Status:               "active",
+			CurrentPeriodStartAt: now.Add(-time.Hour),
+			CurrentPeriodEndAt:   &endAt,
+		}},
+	}
+	service := NewService(repo)
+
+	authorization, err := service.AuthorizeUsage(context.Background(), 1, "gpt-weekly", "run_weekly")
+	if err != nil {
+		t.Fatalf("AuthorizeUsage() error = %v", err)
+	}
+	if authorization == nil || authorization.Mode != "weekly" || authorization.Reservation == nil {
+		t.Fatalf("authorization = %+v, want weekly reservation", authorization)
+	}
+	if repo.reservationRequest == nil || repo.reservationRequest.WeeklyCreditNanousd != 5_000 || repo.reservationRequest.AuthorizedAt.IsZero() {
+		t.Fatalf("weekly reservation request = %+v", repo.reservationRequest)
+	}
+	if authorization.Reservation.WeeklyLimitNanousd != 5_000 {
+		t.Fatalf("weekly limit snapshot = %d, want 5000", authorization.Reservation.WeeklyLimitNanousd)
+	}
+	repo.mode = "usage"
+	if err = service.RecordUsageWithAuthorization(context.Background(), &domainbilling.UsageLedger{
+		UserID:        1,
+		BillingAt:     now,
+		UsageDate:     now,
+		BilledNanousd: 10,
+	}, authorization); err != nil {
+		t.Fatalf("RecordUsageWithAuthorization() after mode change error = %v", err)
+	}
+	if !repo.weeklyUsageSettled || repo.usageSettled {
+		t.Fatalf("weekly mode snapshot was not preserved: %+v", repo)
+	}
+}
+
+func TestAuthorizeUsageWeeklyRejectsMissingSubscriptionButAllowsFreeModel(t *testing.T) {
+	paidRepo := &billingRepositoryStub{
+		mode: "weekly",
+		pricing: &domainbilling.ModelPricing{
+			PlatformModelName:       "gpt-paid",
+			InputNanousdPerMTokens:  1,
+			OutputNanousdPerMTokens: 1,
+		},
+	}
+	_, err := NewService(paidRepo).AuthorizeUsage(context.Background(), 1, "gpt-paid", "run_paid")
+	if !errors.Is(err, ErrWeeklyCreditExceeded) {
+		t.Fatalf("AuthorizeUsage(paid) error = %v, want ErrWeeklyCreditExceeded", err)
+	}
+	if paidRepo.reservationRequest != nil {
+		t.Fatalf("paid call reserved without subscription: %+v", paidRepo.reservationRequest)
+	}
+
+	freeRepo := &billingRepositoryStub{
+		mode: "weekly",
+		pricing: &domainbilling.ModelPricing{
+			PlatformModelName: "gpt-free",
+			IsFree:            true,
+		},
+	}
+	authorization, err := NewService(freeRepo).AuthorizeUsage(context.Background(), 1, "gpt-free", "run_free")
+	if err != nil {
+		t.Fatalf("AuthorizeUsage(free) error = %v", err)
+	}
+	if authorization == nil || authorization.Mode != "weekly" || authorization.Reservation != nil {
+		t.Fatalf("free authorization = %+v, want weekly mode without reservation", authorization)
+	}
+}
+
+func TestAuthorizeUsageMapsWeeklyQuotaExceeded(t *testing.T) {
+	now := time.Now().UTC()
+	endAt := now.Add(24 * time.Hour)
+	repo := &billingRepositoryStub{
+		mode:           "weekly",
+		reservationErr: repository.ErrWeeklyQuotaExceeded,
+		pricing: &domainbilling.ModelPricing{
+			PlatformModelName:       "gpt-weekly",
+			InputNanousdPerMTokens:  1,
+			OutputNanousdPerMTokens: 1,
+		},
+		plans: []domainbilling.Plan{{ID: 2, Code: "pro", WeeklyCreditNanousd: 100, IsActive: true}},
+		subscriptions: []domainbilling.Subscription{{
+			UserID:               1,
+			PlanID:               2,
+			Status:               "active",
+			CurrentPeriodStartAt: now.Add(-time.Hour),
+			CurrentPeriodEndAt:   &endAt,
+		}},
+	}
+	_, err := NewService(repo).AuthorizeUsage(context.Background(), 1, "gpt-weekly", "run_exhausted")
+	if !errors.Is(err, ErrWeeklyCreditExceeded) {
+		t.Fatalf("AuthorizeUsage() error = %v, want ErrWeeklyCreditExceeded", err)
+	}
+}
+
+func TestWeeklyUsageCutoffReachedUsesReservedBudget(t *testing.T) {
+	now := time.Now().UTC()
+	endAt := now.Add(24 * time.Hour)
+	repo := &billingRepositoryStub{
+		mode: "weekly",
+		pricing: &domainbilling.ModelPricing{
+			PlatformModelName:  "gpt-call",
+			Currency:           "USD",
+			PricingMode:        domainbilling.PricingModeCall,
+			CallNanousdPerCall: 100,
+		},
+		plans: []domainbilling.Plan{{ID: 2, Code: "pro", IsActive: true, WeeklyCreditNanousd: 1_000}},
+		subscriptions: []domainbilling.Subscription{{
+			UserID:               1,
+			PlanID:               2,
+			Status:               "active",
+			CurrentPeriodStartAt: now.Add(-time.Hour),
+			CurrentPeriodEndAt:   &endAt,
+		}},
+	}
+	service := NewService(repo)
+	authorization := &domainbilling.UsageAuthorization{
+		Mode: "weekly",
+		Reservation: &domainbilling.UsageBalanceReservation{
+			Mode:                "weekly",
+			WeeklyCreditNanousd: 100,
+		},
+	}
+
+	reached, err := service.WeeklyUsageCutoffReached(context.Background(), authorization, UsagePricingInput{
+		UserID:            1,
+		PlatformModelName: "gpt-call",
+		CallCount:         1,
+		BillingAt:         time.Now().UTC(),
+	})
+	if err != nil {
+		t.Fatalf("WeeklyUsageCutoffReached() error = %v", err)
+	}
+	if !reached {
+		t.Fatal("WeeklyUsageCutoffReached() = false, want true")
+	}
+
+	reached, err = service.WeeklyUsageCutoffReached(context.Background(), &domainbilling.UsageAuthorization{Mode: "usage"}, UsagePricingInput{})
+	if err != nil || reached {
+		t.Fatalf("non-weekly cutoff = %v, error = %v", reached, err)
+	}
+}
+
+func TestRecordUsageWithAuthorizationRoutesWeeklyWithoutChargingBalance(t *testing.T) {
+	repo := &billingRepositoryStub{mode: "usage"}
+	service := NewService(repo)
+	now := time.Now().UTC()
+	err := service.RecordUsageWithAuthorization(context.Background(), &domainbilling.UsageLedger{
+		UserID:        1,
+		BillingAt:     now,
+		UsageDate:     now,
+		BilledNanousd: 125,
+	}, &domainbilling.UsageAuthorization{
+		Mode: "weekly",
+		Reservation: &domainbilling.UsageBalanceReservation{
+			UserID:              1,
+			RefNo:               "run_weekly_settle",
+			Mode:                "weekly",
+			WeeklyLimitNanousd:  1_000,
+			WeeklyCreditNanousd: 200,
+		},
+	})
+	if err != nil {
+		t.Fatalf("RecordUsageWithAuthorization() error = %v", err)
+	}
+	if !repo.weeklyUsageSettled || repo.usageSettled || repo.periodUsageSettled || repo.usageAdded {
+		t.Fatalf("unexpected settlement route: %+v", repo)
+	}
 }
 
 func TestRecordUsageWithAuthorizationUsesBillingAtForPeriod(t *testing.T) {

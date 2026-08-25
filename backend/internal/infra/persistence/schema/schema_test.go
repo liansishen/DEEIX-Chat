@@ -250,6 +250,15 @@ func TestSeedBillingCatalogBindsDefaultPermissionGroup(t *testing.T) {
 		if plan.PermissionGroupID == nil {
 			t.Fatalf("plan %q PermissionGroupID is nil", plan.Code)
 		}
+		if plan.Code == "free" {
+			if plan.WeeklyCreditNanousd != 0 {
+				t.Fatalf("free plan weekly credit = %d, want 0", plan.WeeklyCreditNanousd)
+			}
+			continue
+		}
+		if plan.WeeklyCreditNanousd <= 0 {
+			t.Fatalf("paid plan %q weekly credit = %d, want positive", plan.Code, plan.WeeklyCreditNanousd)
+		}
 	}
 }
 

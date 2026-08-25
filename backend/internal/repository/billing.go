@@ -26,6 +26,7 @@ type BillingRepository interface {
 	AddUsage(ctx context.Context, usage *domainbilling.UsageLedger) error
 	AddUsageAndSettleBalance(ctx context.Context, usage *domainbilling.UsageLedger, reservation *domainbilling.UsageBalanceReservation) error
 	AddPeriodUsageAndSettleOverage(ctx context.Context, usage *domainbilling.UsageLedger, periodStart time.Time, periodEnd time.Time, periodCreditNanousd int64, reservation *domainbilling.UsageBalanceReservation) error
+	AddWeeklyUsageAndSettleQuota(ctx context.Context, usage *domainbilling.UsageLedger, reservation *domainbilling.UsageBalanceReservation) error
 	ReserveUsageBalance(ctx context.Context, input domainbilling.UsageBalanceReservationRequest) (*domainbilling.UsageBalanceReservation, error)
 	RenewUsageBalanceReservation(ctx context.Context, userID uint, refNo string) error
 	ReleaseUsageBalanceReservation(ctx context.Context, userID uint, refNo string) error

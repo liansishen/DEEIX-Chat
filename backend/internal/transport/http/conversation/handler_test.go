@@ -139,6 +139,13 @@ func TestMapBillingStreamErrorReturnsConcurrencyLimit(t *testing.T) {
 	}
 }
 
+func TestMapBillingStreamErrorReturnsWeeklyQuotaExceeded(t *testing.T) {
+	mapped := mapBillingStreamError(appbilling.ErrWeeklyCreditExceeded)
+	if mapped.Status != http.StatusPaymentRequired || mapped.Message != "weekly quota is exhausted" {
+		t.Fatalf("billing stream error = %#v", mapped)
+	}
+}
+
 func TestStreamErrorPayloadClassifiesImageStreamConfigurationFailure(t *testing.T) {
 	err := errors.Join(appconversation.ErrUpstreamRequestFailed, &llm.UpstreamError{
 		StatusCode: 500,

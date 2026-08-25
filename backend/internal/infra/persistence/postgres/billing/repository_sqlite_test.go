@@ -1055,6 +1055,193 @@ func TestValidateRedeemableCodeAllowsUsageCodeInPeriodModeOnly(t *testing.T) {
 	}
 }
 
+func weeklyReservationRequest(userID uint, limitNanousd int64, requestedNanousd int64, refNo string, authorizedAt time.Time) domainbilling.UsageBalanceReservationRequest {
+	return domainbilling.UsageBalanceReservationRequest{
+		UserID:              userID,
+		RefNo:               refNo,
+		Mode:                "weekly",
+		RequestedNanousd:    requestedNanousd,
+		AuthorizedAt:        authorizedAt,
+		WeeklyCreditNanousd: limitNanousd,
+	}
+}
+
+func TestReserveAndReleaseWeeklyUsageMaintainsDurableReservedQuota(t *testing.T) {
+	db := openBillingSQLiteTestDB(t)
+	repo := NewRepo(db)
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	reservation, err := repo.ReserveUsageBalance(ctx, weeklyReservationRequest(1, 100, 60, "weekly_first", now))
+	if err != nil {
+		t.Fatalf("reserve weekly usage: %v", err)
+	}
+	if reservation.WeeklyCycleID == 0 || reservation.WeeklyCreditNanousd != 60 || reservation.WeeklyLimitNanousd != 100 {
+		t.Fatalf("weekly reservation = %+v", reservation)
+	}
+	var account model.BillingWeeklyQuotaAccount
+	if err = db.Where("cycle_id = ? AND user_id = ?", reservation.WeeklyCycleID, 1).First(&account).Error; err != nil {
+		t.Fatalf("load weekly account: %v", err)
+	}
+	if account.UsedNanousd != 0 || account.ReservedNanousd != 60 {
+		t.Fatalf("weekly account counters = used %d reserved %d", account.UsedNanousd, account.ReservedNanousd)
+	}
+	if _, err = repo.ReserveUsageBalance(ctx, weeklyReservationRequest(1, 100, 50, "weekly_over", now)); !errors.Is(err, repository.ErrWeeklyQuotaExceeded) {
+		t.Fatalf("reserve over weekly quota error = %v, want ErrWeeklyQuotaExceeded", err)
+	}
+	if err = repo.ReleaseUsageBalanceReservation(ctx, 1, reservation.RefNo); err != nil {
+		t.Fatalf("release weekly reservation: %v", err)
+	}
+	if err = repo.ReleaseUsageBalanceReservation(ctx, 1, reservation.RefNo); err != nil {
+		t.Fatalf("release weekly reservation twice: %v", err)
+	}
+	if err = db.First(&account, account.ID).Error; err != nil {
+		t.Fatalf("reload weekly account: %v", err)
+	}
+	if account.ReservedNanousd != 0 {
+		t.Fatalf("released weekly reserved quota = %d, want 0", account.ReservedNanousd)
+	}
+	if _, err = repo.ReserveUsageBalance(ctx, weeklyReservationRequest(1, 100, 100, "weekly_after_release", now)); err != nil {
+		t.Fatalf("reserve full quota after release: %v", err)
+	}
+}
+
+func TestSettleWeeklyUsageUsesAuthoritativeCostWithoutChargingBalance(t *testing.T) {
+	db := openBillingSQLiteTestDB(t)
+	repo := NewRepo(db)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	if err := db.Create(&model.BillingAccount{UserID: 1, Currency: "USD", BalanceNanousd: 77, Status: "active"}).Error; err != nil {
+		t.Fatalf("create balance account: %v", err)
+	}
+	reservation, err := repo.ReserveUsageBalance(ctx, weeklyReservationRequest(1, 100, 100, "weekly_settle", now))
+	if err != nil {
+		t.Fatalf("reserve weekly usage: %v", err)
+	}
+	usage := &domainbilling.UsageLedger{
+		UserID:              1,
+		PlatformModelName:   "gpt-weekly",
+		BillingAt:           now.Add(time.Second),
+		UsageDate:           now,
+		BilledCurrency:      "USD",
+		BilledNanousd:       125,
+		PricingSnapshotJSON: `{}`,
+	}
+	if err = repo.AddWeeklyUsageAndSettleQuota(ctx, usage, reservation); err != nil {
+		t.Fatalf("settle weekly usage: %v", err)
+	}
+	var account model.BillingWeeklyQuotaAccount
+	if err = db.Where("cycle_id = ? AND user_id = ?", reservation.WeeklyCycleID, 1).First(&account).Error; err != nil {
+		t.Fatalf("load weekly account: %v", err)
+	}
+	if account.UsedNanousd != 125 || account.ReservedNanousd != 0 {
+		t.Fatalf("weekly account counters = used %d reserved %d, want 125/0", account.UsedNanousd, account.ReservedNanousd)
+	}
+	var balance model.BillingAccount
+	if err = db.Where("user_id = ?", 1).First(&balance).Error; err != nil {
+		t.Fatalf("load balance account: %v", err)
+	}
+	if balance.BalanceNanousd != 77 {
+		t.Fatalf("weekly settlement changed balance to %d", balance.BalanceNanousd)
+	}
+	var settled model.UsageReservation
+	if err = db.First(&settled, reservation.ID).Error; err != nil {
+		t.Fatalf("load settled reservation: %v", err)
+	}
+	if settled.SettledNanousd != 125 || settled.SettledWeeklyCycleID != reservation.WeeklyCycleID {
+		t.Fatalf("durable settlement = amount %d cycle %d", settled.SettledNanousd, settled.SettledWeeklyCycleID)
+	}
+	if _, err = repo.ReserveUsageBalance(ctx, weeklyReservationRequest(1, 100, 1, "weekly_exhausted", now)); !errors.Is(err, repository.ErrWeeklyQuotaExceeded) {
+		t.Fatalf("reserve after authoritative overage error = %v, want ErrWeeklyQuotaExceeded", err)
+	}
+
+	if err = db.Delete(&model.UsageLedger{}, settled.UsageLedgerID).Error; err != nil {
+		t.Fatalf("delete usage ledger: %v", err)
+	}
+	replay := &domainbilling.UsageLedger{UserID: 1, BillingAt: now.Add(2 * time.Second), UsageDate: now, BilledNanousd: 999}
+	if err = repo.AddWeeklyUsageAndSettleQuota(ctx, replay, reservation); err != nil {
+		t.Fatalf("replay after usage log deletion: %v", err)
+	}
+	if replay.BilledNanousd != 125 {
+		t.Fatalf("replayed durable cost = %d, want 125", replay.BilledNanousd)
+	}
+	if err = db.First(&account, account.ID).Error; err != nil {
+		t.Fatalf("reload weekly account after cleanup replay: %v", err)
+	}
+	if account.UsedNanousd != 125 || account.ReservedNanousd != 0 {
+		t.Fatalf("cleanup replay changed weekly account to %d/%d", account.UsedNanousd, account.ReservedNanousd)
+	}
+}
+
+func TestSettleWeeklyUsageAssignsCrossResetCostToCompletionCycle(t *testing.T) {
+	db := openBillingSQLiteTestDB(t)
+	repo := NewRepo(db)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	reservation, err := repo.ReserveUsageBalance(ctx, weeklyReservationRequest(1, 1_000, 200, "weekly_cross_reset", now))
+	if err != nil {
+		t.Fatalf("reserve weekly usage: %v", err)
+	}
+	resetAt := now.Add(time.Minute)
+	completionCycle, err := repo.ResetWeeklyQuotaCycle(ctx, resetAt, 9)
+	if err != nil {
+		t.Fatalf("manual weekly reset: %v", err)
+	}
+	usage := &domainbilling.UsageLedger{
+		UserID:            1,
+		PlatformModelName: "gpt-weekly",
+		BillingAt:         resetAt.Add(time.Second),
+		UsageDate:         resetAt,
+		BilledCurrency:    "USD",
+		BilledNanousd:     150,
+	}
+	if err = repo.AddWeeklyUsageAndSettleQuota(ctx, usage, reservation); err != nil {
+		t.Fatalf("settle cross-reset weekly usage: %v", err)
+	}
+	var origin model.BillingWeeklyQuotaAccount
+	if err = db.Where("cycle_id = ? AND user_id = ?", reservation.WeeklyCycleID, 1).First(&origin).Error; err != nil {
+		t.Fatalf("load origin weekly account: %v", err)
+	}
+	var completion model.BillingWeeklyQuotaAccount
+	if err = db.Where("cycle_id = ? AND user_id = ?", completionCycle.ID, 1).First(&completion).Error; err != nil {
+		t.Fatalf("load completion weekly account: %v", err)
+	}
+	if origin.UsedNanousd != 0 || origin.ReservedNanousd != 0 {
+		t.Fatalf("origin account counters = %d/%d, want 0/0", origin.UsedNanousd, origin.ReservedNanousd)
+	}
+	if completion.UsedNanousd != 150 || completion.ReservedNanousd != 0 {
+		t.Fatalf("completion account counters = %d/%d, want 150/0", completion.UsedNanousd, completion.ReservedNanousd)
+	}
+}
+
+func TestWeeklyFreeUsageDoesNotRequireReservationOrConsumeQuota(t *testing.T) {
+	db := openBillingSQLiteTestDB(t)
+	repo := NewRepo(db)
+	now := time.Now().UTC()
+	usage := &domainbilling.UsageLedger{
+		UserID:            1,
+		PlatformModelName: "gpt-free",
+		IsFreeModel:       true,
+		BillingAt:         now,
+		UsageDate:         now,
+		BilledCurrency:    "USD",
+		BilledNanousd:     999,
+	}
+	if err := repo.AddWeeklyUsageAndSettleQuota(context.Background(), usage, nil); err != nil {
+		t.Fatalf("record free weekly usage: %v", err)
+	}
+	if usage.BilledNanousd != 0 || usage.BalanceAfterNanousd != nil {
+		t.Fatalf("free weekly usage = %+v", usage)
+	}
+	var accountCount int64
+	if err := db.Model(&model.BillingWeeklyQuotaAccount{}).Count(&accountCount).Error; err != nil {
+		t.Fatalf("count weekly accounts: %v", err)
+	}
+	if accountCount != 0 {
+		t.Fatalf("free weekly usage created %d quota accounts", accountCount)
+	}
+}
+
 func openBillingSQLiteTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
@@ -1071,7 +1258,16 @@ func openBillingSQLiteTestDB(t *testing.T) *gorm.DB {
 		_ = sqlDB.Close()
 	})
 
-	if err := db.AutoMigrate(&model.UsageLedger{}, &model.BillingAccount{}, &model.BalanceTransaction{}, &model.UsageReservation{}, &model.Redemption{}); err != nil {
+	if err := db.AutoMigrate(
+		&model.UsageLedger{},
+		&model.BillingAccount{},
+		&model.BalanceTransaction{},
+		&model.UsageReservation{},
+		&model.Redemption{},
+		&model.BillingQuotaSchedule{},
+		&model.BillingQuotaCycle{},
+		&model.BillingWeeklyQuotaAccount{},
+	); err != nil {
 		t.Fatalf("migrate billing tables: %v", err)
 	}
 	return db

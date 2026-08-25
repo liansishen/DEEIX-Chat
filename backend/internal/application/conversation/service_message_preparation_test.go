@@ -148,6 +148,7 @@ func TestShouldPersistMessageUsageRejection(t *testing.T) {
 	}{
 		{name: "insufficient balance", err: appbilling.ErrUsageBalanceInsufficient, want: true},
 		{name: "wrapped insufficient balance", err: errors.Join(errors.New("authorize usage"), appbilling.ErrUsageBalanceInsufficient), want: true},
+		{name: "weekly quota exhausted", err: appbilling.ErrWeeklyCreditExceeded, want: true},
 		{name: "concurrency limit", err: appbilling.ErrUsageConcurrencyLimitExceeded, want: false},
 		{name: "reservation conflict", err: appbilling.ErrUsageReservationConflict, want: false},
 		{name: "pricing missing", err: appbilling.ErrModelPricingRequired, want: false},

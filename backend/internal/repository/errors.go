@@ -17,6 +17,8 @@ var (
 	ErrInvalidInput = errors.New("invalid input")
 	// ErrInsufficientBalance 表示余额不足，无法完成扣费。
 	ErrInsufficientBalance = errors.New("insufficient balance")
+	// ErrWeeklyQuotaExceeded 表示统一周额度不足，无法开始新的付费调用。
+	ErrWeeklyQuotaExceeded = errors.New("weekly quota exceeded")
 	// ErrUsageReservationLimitExceeded 表示用户活跃付费调用数量达到上限。
 	ErrUsageReservationLimitExceeded = errors.New("usage reservation limit exceeded")
 	// ErrRedemptionUnavailable 表示兑换码不可用。

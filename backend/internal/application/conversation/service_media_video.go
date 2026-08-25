@@ -519,6 +519,7 @@ func (s *Service) StreamMediaVideo(ctx context.Context, input MediaVideoInput) (
 		CacheWrite5mTokens:  usage.CacheWrite5mTokens,
 		CacheWrite1hTokens:  usage.CacheWrite1hTokens,
 		StartedAt:           startedAt,
+		CompletedAt:         time.Now().UTC(),
 		LatencyMS:           latencyMS,
 		DurationSeconds:     durationSeconds,
 	}

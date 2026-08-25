@@ -52,8 +52,12 @@ func (s *Service) runTemporaryGeneration(
 		output, err := s.llmClient.GenerateStream(ctx, routeConfig, currentInput, func(event llm.GenerateStreamEvent) error {
 			if event.Usage != (llm.Usage{}) {
 				observedUsage = event.Usage
-				if emitErr := emitLLMUsageEvent(input.OnEvent, addLLMUsage(totalUsage, observedUsage)); emitErr != nil {
+				currentUsage := addLLMUsage(totalUsage, observedUsage)
+				if emitErr := emitLLMUsageEvent(input.OnEvent, currentUsage); emitErr != nil {
 					return emitErr
+				}
+				if s.weeklyUsageCutoffReached(ctx, input.UsageAuthorization, input.UserID, 0, route, currentUsage, 1) {
+					return ErrMessageGenerationCanceled
 				}
 			}
 			if traceRecorder != nil && event.Reasoning != nil && event.Reasoning.Text != "" {
@@ -103,6 +107,9 @@ func (s *Service) runTemporaryGeneration(
 	output, err := runGenerate(initialInput, false)
 	if err != nil {
 		return temporaryGenerationResult{Output: output, Usage: totalUsage, FirstTokenLatency: firstTokenLatency}, err
+	}
+	if output != nil && len(output.ToolCalls) > 0 && s.weeklyUsageCutoffReached(ctx, input.UsageAuthorization, input.UserID, 0, route, totalUsage, 1) {
+		return temporaryGenerationResult{Output: output, Usage: totalUsage, FirstTokenLatency: firstTokenLatency}, ErrMessageGenerationCanceled
 	}
 
 	messages := cloneLLMMessages(initialInput.Messages)

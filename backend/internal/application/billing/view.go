@@ -25,6 +25,7 @@ type BillingPlanView struct {
 	Description         string
 	FeatureJSON         string
 	PeriodCreditNanousd int64
+	WeeklyCreditNanousd int64
 	DiscountPercent     int
 	SortOrder           int
 	IsActive            bool

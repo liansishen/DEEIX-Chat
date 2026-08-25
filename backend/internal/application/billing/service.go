@@ -303,6 +303,7 @@ type PlanUpdateInput struct {
 	Name                string
 	Description         string
 	PeriodCreditNanousd int64
+	WeeklyCreditNanousd *int64
 	DiscountPercent     int
 	Currency            string
 	AmountCents         int64
@@ -538,6 +539,7 @@ func (s *Service) ListPlans(ctx context.Context) ([]BillingPlanView, error) {
 			Description:         item.Description,
 			FeatureJSON:         item.FeatureJSON,
 			PeriodCreditNanousd: item.PeriodCreditNanousd,
+			WeeklyCreditNanousd: item.WeeklyCreditNanousd,
 			DiscountPercent:     item.DiscountPercent,
 			SortOrder:           item.SortOrder,
 			IsActive:            item.IsActive,
@@ -995,6 +997,10 @@ func (s *Service) UpdatePlan(ctx context.Context, planID uint, input PlanUpdateI
 		return nil, err
 	}
 
+	weeklyCreditNanousd := current.WeeklyCreditNanousd
+	if input.WeeklyCreditNanousd != nil {
+		weeklyCreditNanousd = clampNonNegative(*input.WeeklyCreditNanousd)
+	}
 	plan := &domainbilling.Plan{
 		ID:                  current.ID,
 		Code:                current.Code,
@@ -1002,6 +1008,7 @@ func (s *Service) UpdatePlan(ctx context.Context, planID uint, input PlanUpdateI
 		Description:         strings.TrimSpace(input.Description),
 		FeatureJSON:         current.FeatureJSON,
 		PeriodCreditNanousd: clampNonNegative(input.PeriodCreditNanousd),
+		WeeklyCreditNanousd: weeklyCreditNanousd,
 		DiscountPercent:     clampPercent(input.DiscountPercent),
 		SortOrder:           current.SortOrder,
 		IsActive:            true,
@@ -1026,6 +1033,7 @@ func (s *Service) UpdatePlan(ctx context.Context, planID uint, input PlanUpdateI
 		Description:         plan.Description,
 		FeatureJSON:         plan.FeatureJSON,
 		PeriodCreditNanousd: plan.PeriodCreditNanousd,
+		WeeklyCreditNanousd: plan.WeeklyCreditNanousd,
 		DiscountPercent:     plan.DiscountPercent,
 		SortOrder:           plan.SortOrder,
 		IsActive:            plan.IsActive,
@@ -1107,10 +1115,22 @@ func (s *Service) RecordUsageWithAuthorization(ctx context.Context, usage *domai
 			return err
 		}
 	}
-	if mode == "usage" || (mode != "period" && reservation != nil) {
+	if mode == "usage" {
 		if err := s.repo.AddUsageAndSettleBalance(ctx, usage, reservation); err != nil {
 			if errors.Is(err, repository.ErrInsufficientBalance) {
 				return ErrUsageBalanceInsufficient
+			}
+			if errors.Is(err, repository.ErrConflict) {
+				return ErrUsageReservationConflict
+			}
+			return err
+		}
+		return nil
+	}
+	if mode == "weekly" {
+		if err := s.repo.AddWeeklyUsageAndSettleQuota(ctx, usage, reservation); err != nil {
+			if errors.Is(err, repository.ErrWeeklyQuotaExceeded) {
+				return ErrWeeklyCreditExceeded
 			}
 			if errors.Is(err, repository.ErrConflict) {
 				return ErrUsageReservationConflict
@@ -1167,7 +1187,7 @@ func (s *Service) AuthorizeUsage(ctx context.Context, userID uint, platformModel
 	}
 	mode = strings.TrimSpace(mode)
 	authorization := &domainbilling.UsageAuthorization{Mode: mode}
-	if mode != "usage" && mode != "period" {
+	if mode != "usage" && mode != "period" && mode != "weekly" {
 		return authorization, nil
 	}
 	pricing, err := s.getResolvedModelPricing(ctx, platformModelName)
@@ -1201,6 +1221,7 @@ func (s *Service) AuthorizeUsage(ctx context.Context, userID uint, platformModel
 		RefNo:            strings.TrimSpace(refNo),
 		Mode:             mode,
 		RequestedNanousd: reservationNanousd,
+		AuthorizedAt:     time.Now().UTC(),
 	}
 	if mode == "period" {
 		// 周期额度和余额预算必须在同一个仓储事务中计算，避免并发请求重复占用同一份额度。
@@ -1212,6 +1233,13 @@ func (s *Service) AuthorizeUsage(ctx context.Context, userID uint, platformModel
 		request.PeriodEndAt = &endAt
 		request.PeriodCreditNanousd = plan.PeriodCreditNanousd
 	}
+	if mode == "weekly" {
+		plan, planErr := s.currentWeeklyPlan(ctx, userID, request.AuthorizedAt)
+		if planErr != nil {
+			return nil, planErr
+		}
+		request.WeeklyCreditNanousd = plan.WeeklyCreditNanousd
+	}
 	reservation, err := s.repo.ReserveUsageBalance(ctx, request)
 	if err != nil {
 		if errors.Is(err, repository.ErrUsageReservationLimitExceeded) {
@@ -1220,6 +1248,9 @@ func (s *Service) AuthorizeUsage(ctx context.Context, userID uint, platformModel
 		if errors.Is(err, repository.ErrInsufficientBalance) {
 			return nil, ErrUsageBalanceInsufficient
 		}
+		if errors.Is(err, repository.ErrWeeklyQuotaExceeded) {
+			return nil, ErrWeeklyCreditExceeded
+		}
 		if errors.Is(err, repository.ErrConflict) {
 			return nil, ErrUsageReservationConflict
 		}
@@ -1227,6 +1258,23 @@ func (s *Service) AuthorizeUsage(ctx context.Context, userID uint, platformModel
 	}
 	authorization.Reservation = reservation
 	return authorization, nil
+}
+
+// WeeklyUsageCutoffReached reports whether observed usage has consumed the request's weekly reservation.
+func (s *Service) WeeklyUsageCutoffReached(ctx context.Context, authorization *domainbilling.UsageAuthorization, input UsagePricingInput) (bool, error) {
+	if authorization == nil || authorization.Reservation == nil || strings.TrimSpace(authorization.Mode) != "weekly" {
+		return false, nil
+	}
+	budgetNanousd := authorization.Reservation.WeeklyCreditNanousd
+	if budgetNanousd <= 0 {
+		return true, nil
+	}
+	input.Authorization = authorization
+	ledger, err := s.BuildUsageLedger(ctx, input)
+	if err != nil {
+		return false, err
+	}
+	return ledger != nil && ledger.BilledNanousd >= budgetNanousd, nil
 }
 
 // ReleaseUsageAuthorization 在调用未产生可计费用量时释放预算。
@@ -1254,6 +1302,22 @@ func (s *Service) MarkUsageAuthorizationForReconciliation(ctx context.Context, a
 	}
 	reservation := authorization.Reservation
 	return s.repo.MarkUsageReservationReconciliationRequired(ctx, reservation.UserID, reservation.RefNo, failureCode)
+}
+
+func (s *Service) currentWeeklyPlan(ctx context.Context, userID uint, now time.Time) (domainbilling.Plan, error) {
+	subscriptions, planMap, err := s.listSubscriptionEntitlements(ctx, []uint{userID}, now.UTC())
+	if err != nil {
+		return domainbilling.Plan{}, err
+	}
+	subscription, ok := selectCurrentSubscription(subscriptions, planMap, now.UTC())
+	if !ok {
+		return domainbilling.Plan{}, ErrWeeklyCreditExceeded
+	}
+	plan, ok := planMap[subscription.PlanID]
+	if !ok || strings.TrimSpace(plan.Code) == "free" || plan.WeeklyCreditNanousd <= 0 {
+		return domainbilling.Plan{}, ErrWeeklyCreditExceeded
+	}
+	return plan, nil
 }
 
 func (s *Service) currentPeriodPlan(
@@ -1442,6 +1506,7 @@ func toBillingPlanView(plan domainbilling.Plan) BillingPlanView {
 		Description:         plan.Description,
 		FeatureJSON:         plan.FeatureJSON,
 		PeriodCreditNanousd: plan.PeriodCreditNanousd,
+		WeeklyCreditNanousd: plan.WeeklyCreditNanousd,
 		DiscountPercent:     plan.DiscountPercent,
 		SortOrder:           plan.SortOrder,
 		IsActive:            plan.IsActive,
@@ -2668,6 +2733,7 @@ func (s *Service) GetBillingOverview(ctx context.Context, userID uint, now time.
 		Description:         plan.Description,
 		FeatureJSON:         plan.FeatureJSON,
 		PeriodCreditNanousd: plan.PeriodCreditNanousd,
+		WeeklyCreditNanousd: plan.WeeklyCreditNanousd,
 		DiscountPercent:     plan.DiscountPercent,
 		SortOrder:           plan.SortOrder,
 		IsActive:            plan.IsActive,

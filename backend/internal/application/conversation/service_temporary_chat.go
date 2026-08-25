@@ -8,6 +8,7 @@ import (
 
 	"github.com/DEEIX-AI/DEEIX-Chat/backend/internal/application/channel"
 	appcm "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/application/contentmoderation"
+	domainbilling "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/domain/billing"
 	model "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/domain/conversation"
 	"github.com/DEEIX-AI/DEEIX-Chat/backend/internal/infra/llm"
 	"github.com/google/uuid"
@@ -34,6 +35,7 @@ type TemporaryChatInput struct {
 	KnowledgeBaseIDs        []string
 	HTMLVisualPromptEnabled bool
 	Messages                []TemporaryChatMessage
+	UsageAuthorization      *domainbilling.UsageAuthorization
 	OnEvent                 func(eventType string, payload map[string]interface{}) error
 }
 
@@ -284,6 +286,7 @@ func (s *Service) StreamTemporaryChat(
 		ServerSideToolUsage: output.ServerSideToolUsage,
 		LatencyMS:           time.Since(startedAt).Milliseconds(),
 		StartedAt:           startedAt,
+		CompletedAt:         time.Now().UTC(),
 	}
 	if moderationCoord != nil {
 		applyBarrierOutcome(result, moderationCoord.AfterGeneration(ctx, assistantText, nil))

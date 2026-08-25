@@ -7,6 +7,8 @@ var (
 	ErrSubscribeFailed = errors.New("subscribe failed")
 	// ErrPeriodCreditExceeded 周期套餐用量额度已用完。
 	ErrPeriodCreditExceeded = errors.New("period usage credit exceeded")
+	// ErrWeeklyCreditExceeded 统一周额度已用完。
+	ErrWeeklyCreditExceeded = errors.New("weekly usage credit exceeded")
 	// ErrModelPricingRequired 付费模型缺少有效单价。
 	ErrModelPricingRequired = errors.New("model pricing is required")
 	// ErrInvalidModelPricing 表示模型定价输入非法或目标平台模型不存在。

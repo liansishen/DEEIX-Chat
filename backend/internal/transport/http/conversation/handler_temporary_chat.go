@@ -78,6 +78,7 @@ func (h *Handler) StreamTemporaryChatMessage(c *gin.Context) {
 	}
 	stopAuthorizationRenewal := h.startUsageAuthorizationRenewal(authorization)
 	defer stopAuthorizationRenewal()
+	input.UsageAuthorization = authorization
 
 	c.Header("Content-Type", "application/x-ndjson; charset=utf-8")
 	c.Header("Cache-Control", "no-store, no-cache, no-transform")

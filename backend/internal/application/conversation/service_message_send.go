@@ -1059,6 +1059,9 @@ func (s *Service) sendMessageInternal(
 						return err
 					}
 				}
+				if s.weeklyUsageCutoffReached(generationCtx, input.UsageAuthorization, input.UserID, input.ConversationID, route, currentUsage, 1) {
+					return ErrMessageGenerationCanceled
+				}
 			}
 			if event.GeneratedImage != nil {
 				attemptHadSideEffect = true
@@ -1363,6 +1366,10 @@ func (s *Service) sendMessageInternal(
 		totalUsage = usageAccumulator.usage()
 	} else {
 		usageAccumulator.setObservedUsage(totalUsage)
+	}
+	if len(upstreamOutput.ToolCalls) > 0 && s.weeklyUsageCutoffReached(ctx, input.UsageAuthorization, input.UserID, input.ConversationID, route, totalUsage, 1) {
+		retErr = ErrMessageGenerationCanceled
+		return nil, retErr
 	}
 	totalServerSideToolUsage = addServerSideToolUsage(nil, upstreamOutput.ServerSideToolUsage)
 	remainingToolCalls := max(s.resolveMaxToolCallsPerRun()-len(imageProcessing.Rows), 0)
@@ -1725,6 +1732,7 @@ func (s *Service) sendMessageInternal(
 		ServerSideToolUsage:   totalServerSideToolUsage,
 		LatencyMS:             time.Since(startedAt).Milliseconds(),
 		StartedAt:             startedAt,
+		CompletedAt:           time.Now().UTC(),
 		postBillingCompaction: postBillingCompaction,
 	}
 	// Soft moderation barrier: show checking, then block or pass.
