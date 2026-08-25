@@ -701,7 +701,7 @@ export function BillingRedemptionSection({ plans, billingMode, loading }: Billin
   }
 
   function redemptionModeLabel(mode: AdminBillingMode | string): string {
-    return t(`billingConfig.modes.${mode === "period" ? "period" : mode === "usage" ? "usage" : "self"}`);
+    return t(`billingConfig.modes.${mode === "weekly" ? "weekly" : mode === "period" ? "period" : mode === "usage" ? "usage" : "self"}`);
   }
 
   function redemptionUnavailableReason(item: AdminRedemptionCodeDTO): string | null {

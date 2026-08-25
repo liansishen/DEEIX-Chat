@@ -78,6 +78,7 @@
     "verificationCodeRecent": "A verification code was sent recently. Try again later."
   },
   "billing": {
+    "weeklyQuotaExceeded": "Your weekly subscription allowance has been exhausted.",
     "insufficientBalance": "Insufficient balance.",
     "insufficientFunds": "Insufficient balance.",
     "concurrencyLimitExceeded": "Up to 5 paid requests can run at the same time.",

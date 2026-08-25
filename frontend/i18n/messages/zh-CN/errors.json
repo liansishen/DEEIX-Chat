@@ -78,6 +78,7 @@
     "verificationCodeRecent": "验证码刚刚已发送，请稍后再试。"
   },
   "billing": {
+    "weeklyQuotaExceeded": "您的每周订阅额度已用尽。",
     "insufficientBalance": "余额不足。",
     "insufficientFunds": "余额不足。",
     "concurrencyLimitExceeded": "最多同时运行 5 个付费请求。",
