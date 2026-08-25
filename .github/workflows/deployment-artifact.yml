@@ -11,6 +11,21 @@ jobs:
     name: Validate and build linux-amd64
     runs-on: ubuntu-24.04
 
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: deeix_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d deeix_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,12 +76,32 @@ jobs:
           set -o pipefail
           pnpm check 2>&1 | tee evidence/workspace-quality.log
 
+      - name: Run PostgreSQL billing concurrency integration tests
+        shell: bash
+        env:
+          DEEIX_TEST_DATABASE_DSN: postgres://postgres:postgres@127.0.0.1:5432/deeix_test?sslmode=disable
+        run: |
+          set -o pipefail
+          cd backend
+          echo "DEEIX_TEST_DATABASE_DSN is configured for the PostgreSQL 17 Actions service" | tee ../evidence/postgres-integration.log
+          go test -count=1 -v ./internal/infra/persistence/postgres/billing \
+            -run '^TestReserve(UsageBalance|WeeklyUsage)SerializesConcurrentPostgresRequests$' \
+            2>&1 | tee -a ../evidence/postgres-integration.log
+          if grep -q -- '--- SKIP:' ../evidence/postgres-integration.log; then
+            echo "PostgreSQL billing integration test was skipped" >&2
+            exit 1
+          fi
+          grep -q -- '--- PASS: TestReserveUsageBalanceSerializesConcurrentPostgresRequests' ../evidence/postgres-integration.log
+          grep -q -- '--- PASS: TestReserveWeeklyUsageSerializesConcurrentPostgresRequests' ../evidence/postgres-integration.log
+
       - name: Run backend tests
         shell: bash
         run: |
           set -o pipefail
+          cp evidence/postgres-integration.log evidence/backend-tests.log
           cd backend
-          go test ./... 2>&1 | tee ../evidence/backend-tests.log
+          printf '\nFull backend test suite (optional external-service tests use their normal skip policy):\n' | tee -a ../evidence/backend-tests.log
+          go test ./... 2>&1 | tee -a ../evidence/backend-tests.log
 
       - name: Build static frontend
         run: pnpm --filter @deeix/web build
@@ -92,7 +127,7 @@ jobs:
           cp config.sqlite.example.yaml release/config.sqlite.example.yaml
           cp VERSION release/VERSION
           cp LICENSE NOTICE release/licenses/
-          cp evidence/backend-tests.log evidence/workspace-quality.log release/evidence/
+          cp evidence/backend-tests.log evidence/postgres-integration.log evidence/workspace-quality.log release/evidence/
           printf 'commit=%s\nworkflow_run=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > release/BUILD-MANIFEST
           (
             cd release
