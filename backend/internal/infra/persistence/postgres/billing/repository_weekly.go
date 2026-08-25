@@ -73,8 +73,10 @@ func (r *Repo) reserveWeeklyUsage(ctx context.Context, input domainbilling.Usage
 		if requestedNanousd <= 0 {
 			remainingSlots := int64(domainbilling.UsageReservationMaxActivePerUser) - activeReservationCount
 			requestedNanousd = divideBudgetAcrossSlots(availableNanousd, remainingSlots)
+		} else if requestedNanousd > availableNanousd {
+			requestedNanousd = availableNanousd
 		}
-		if requestedNanousd <= 0 || requestedNanousd > availableNanousd {
+		if requestedNanousd <= 0 {
 			return repository.ErrWeeklyQuotaExceeded
 		}
 		reservation := models.UsageReservation{

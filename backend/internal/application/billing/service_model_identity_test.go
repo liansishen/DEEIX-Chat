@@ -511,7 +511,8 @@ func TestAuthorizeUsageWeeklyRequiresPaidSubscriptionAndSnapshotsLimit(t *testin
 	now := time.Now().UTC()
 	endAt := now.Add(30 * 24 * time.Hour)
 	repo := &billingRepositoryStub{
-		mode: "weekly",
+		mode:           "weekly",
+		prepaidNanousd: 10_000,
 		pricing: &domainbilling.ModelPricing{
 			PlatformModelName:       "gpt-weekly",
 			InputNanousdPerMTokens:  1,
@@ -541,8 +542,8 @@ func TestAuthorizeUsageWeeklyRequiresPaidSubscriptionAndSnapshotsLimit(t *testin
 	if authorization == nil || authorization.Mode != "weekly" || authorization.Reservation == nil {
 		t.Fatalf("authorization = %+v, want weekly reservation", authorization)
 	}
-	if repo.reservationRequest == nil || repo.reservationRequest.WeeklyCreditNanousd != 5_000 || repo.reservationRequest.AuthorizedAt.IsZero() {
-		t.Fatalf("weekly reservation request = %+v", repo.reservationRequest)
+	if repo.reservationRequest == nil || repo.reservationRequest.RequestedNanousd != 5_000 || repo.reservationRequest.WeeklyCreditNanousd != 5_000 || repo.reservationRequest.AuthorizedAt.IsZero() {
+		t.Fatalf("weekly reservation request = %+v, want requested and weekly credit 5000", repo.reservationRequest)
 	}
 	if authorization.Reservation.WeeklyLimitNanousd != 5_000 {
 		t.Fatalf("weekly limit snapshot = %d, want 5000", authorization.Reservation.WeeklyLimitNanousd)

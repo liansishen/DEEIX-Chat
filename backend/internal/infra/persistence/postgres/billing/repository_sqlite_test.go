@@ -1086,8 +1086,12 @@ func TestReserveAndReleaseWeeklyUsageMaintainsDurableReservedQuota(t *testing.T)
 	if account.UsedNanousd != 0 || account.ReservedNanousd != 60 {
 		t.Fatalf("weekly account counters = used %d reserved %d", account.UsedNanousd, account.ReservedNanousd)
 	}
-	if _, err = repo.ReserveUsageBalance(ctx, weeklyReservationRequest(1, 100, 50, "weekly_over", now)); !errors.Is(err, repository.ErrWeeklyQuotaExceeded) {
-		t.Fatalf("reserve over weekly quota error = %v, want ErrWeeklyQuotaExceeded", err)
+	remaining, err := repo.ReserveUsageBalance(ctx, weeklyReservationRequest(1, 100, 50, "weekly_remaining", now))
+	if err != nil {
+		t.Fatalf("reserve remaining weekly quota: %v", err)
+	}
+	if remaining.WeeklyCreditNanousd != 40 {
+		t.Fatalf("remaining weekly reservation = %d, want 40", remaining.WeeklyCreditNanousd)
 	}
 	if err = repo.ReleaseUsageBalanceReservation(ctx, 1, reservation.RefNo); err != nil {
 		t.Fatalf("release weekly reservation: %v", err)
@@ -1098,11 +1102,14 @@ func TestReserveAndReleaseWeeklyUsageMaintainsDurableReservedQuota(t *testing.T)
 	if err = db.First(&account, account.ID).Error; err != nil {
 		t.Fatalf("reload weekly account: %v", err)
 	}
-	if account.ReservedNanousd != 0 {
-		t.Fatalf("released weekly reserved quota = %d, want 0", account.ReservedNanousd)
+	if account.ReservedNanousd != 40 {
+		t.Fatalf("released weekly reserved quota = %d, want 40", account.ReservedNanousd)
+	}
+	if err = repo.ReleaseUsageBalanceReservation(ctx, 1, remaining.RefNo); err != nil {
+		t.Fatalf("release remaining weekly reservation: %v", err)
 	}
 	if _, err = repo.ReserveUsageBalance(ctx, weeklyReservationRequest(1, 100, 100, "weekly_after_release", now)); err != nil {
-		t.Fatalf("reserve full quota after release: %v", err)
+		t.Fatalf("reserve full quota after releases: %v", err)
 	}
 }
 

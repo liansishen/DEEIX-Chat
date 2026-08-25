@@ -1243,6 +1243,9 @@ func (s *Service) AuthorizeUsage(ctx context.Context, userID uint, platformModel
 			return nil, planErr
 		}
 		request.WeeklyCreditNanousd = plan.WeeklyCreditNanousd
+		if request.RequestedNanousd > request.WeeklyCreditNanousd {
+			request.RequestedNanousd = request.WeeklyCreditNanousd
+		}
 	}
 	reservation, err := s.repo.ReserveUsageBalance(ctx, request)
 	if err != nil {

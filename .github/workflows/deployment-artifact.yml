@@ -100,6 +100,11 @@ jobs:
           set -o pipefail
           cp evidence/postgres-integration.log evidence/backend-tests.log
           cd backend
+          printf '\nWeekly authorization regression test:\n' | tee -a ../evidence/backend-tests.log
+          go test -count=1 -v ./internal/application/billing \
+            -run '^TestAuthorizeUsageWeeklyCapsLegacyPrepaidBudgetToAvailableQuota$' \
+            2>&1 | tee -a ../evidence/backend-tests.log
+          grep -q -- '--- PASS: TestAuthorizeUsageWeeklyCapsLegacyPrepaidBudgetToAvailableQuota' ../evidence/backend-tests.log
           printf '\nFull backend test suite (optional external-service tests use their normal skip policy):\n' | tee -a ../evidence/backend-tests.log
           go test ./... 2>&1 | tee -a ../evidence/backend-tests.log
 

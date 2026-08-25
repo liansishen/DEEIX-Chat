@@ -145,25 +145,20 @@ func TestReserveWeeklyUsageSerializesConcurrentPostgresRequests(t *testing.T) {
 	close(results)
 
 	var successCount int
-	var quotaCount int
 	for reserveErr := range results {
-		switch {
-		case reserveErr == nil:
-			successCount++
-		case errors.Is(reserveErr, repository.ErrWeeklyQuotaExceeded):
-			quotaCount++
-		default:
+		if reserveErr != nil {
 			t.Fatalf("concurrent weekly reserve error = %v", reserveErr)
 		}
+		successCount++
 	}
-	if successCount != 3 || quotaCount != 1 {
-		t.Fatalf("concurrent weekly reserve results = success %d, quota %d; want 3/1", successCount, quotaCount)
+	if successCount != requestCount {
+		t.Fatalf("concurrent weekly reserve results = success %d, want %d", successCount, requestCount)
 	}
 	var account model.BillingWeeklyQuotaAccount
 	if err = db.Where("user_id = ?", userID).Order("id DESC").First(&account).Error; err != nil {
 		t.Fatalf("load weekly account: %v", err)
 	}
-	if account.UsedNanousd != 0 || account.ReservedNanousd != 90 {
-		t.Fatalf("weekly account counters = %d/%d, want 0/90", account.UsedNanousd, account.ReservedNanousd)
+	if account.UsedNanousd != 0 || account.ReservedNanousd != 100 {
+		t.Fatalf("weekly account counters = %d/%d, want 0/100", account.UsedNanousd, account.ReservedNanousd)
 	}
 }
