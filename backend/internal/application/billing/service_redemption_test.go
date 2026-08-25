@@ -439,6 +439,51 @@ func TestCreateRedemptionCodesPeriodValidatesPlanAndDuration(t *testing.T) {
 	}
 }
 
+func TestCreateRedemptionCodesWeeklyRequiresSupportedCalendarDuration(t *testing.T) {
+	repo := newRedemptionRepositoryStub(domainbilling.RedemptionCodeModeWeekly)
+	repo.plan = &domainbilling.Plan{ID: 21, Code: "pro", IsActive: true, WeeklyCreditNanousd: 5_000_000_000}
+	service := NewService(repo)
+	service.SetRedemptionCodeSecret("test-secret")
+
+	items, err := service.CreateRedemptionCodes(context.Background(), 7, RedemptionCodeInput{
+		Code:          "WEEKLY_QUARTER",
+		Mode:          domainbilling.RedemptionCodeModeWeekly,
+		PlanID:        21,
+		DurationUnit:  domainbilling.RedemptionDurationUnitMonth,
+		DurationCount: 3,
+		PerUserLimit:  1,
+	})
+	if err != nil {
+		t.Fatalf("CreateRedemptionCodes() error = %v", err)
+	}
+	if len(items) != 1 || repo.created[0].DurationUnit != domainbilling.RedemptionDurationUnitMonth || repo.created[0].DurationCount != 3 || repo.created[0].DurationDays != 0 {
+		t.Fatalf("created weekly duration = %+v, want three calendar months", repo.created)
+	}
+
+	_, err = service.CreateRedemptionCodes(context.Background(), 7, RedemptionCodeInput{
+		Code:         "WEEKLY_DAYS",
+		Mode:         domainbilling.RedemptionCodeModeWeekly,
+		PlanID:       21,
+		DurationDays: 30,
+		PerUserLimit: 1,
+	})
+	if !errors.Is(err, ErrInvalidRedemptionCode) {
+		t.Fatalf("CreateRedemptionCodes() fixed-day error = %v, want ErrInvalidRedemptionCode", err)
+	}
+
+	_, err = service.CreateRedemptionCodes(context.Background(), 7, RedemptionCodeInput{
+		Code:          "WEEKLY_TWO_MONTHS",
+		Mode:          domainbilling.RedemptionCodeModeWeekly,
+		PlanID:        21,
+		DurationUnit:  domainbilling.RedemptionDurationUnitMonth,
+		DurationCount: 2,
+		PerUserLimit:  1,
+	})
+	if !errors.Is(err, ErrInvalidRedemptionCode) {
+		t.Fatalf("CreateRedemptionCodes() unsupported-month error = %v, want ErrInvalidRedemptionCode", err)
+	}
+}
+
 func TestCreateRedemptionCodesMapsDuplicateHash(t *testing.T) {
 	repo := newRedemptionRepositoryStub(domainbilling.RedemptionCodeModeUsage)
 	repo.createErr = repository.ErrDuplicate

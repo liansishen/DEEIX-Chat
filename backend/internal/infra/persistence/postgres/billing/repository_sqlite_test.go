@@ -1028,6 +1028,31 @@ func TestValidateRedeemableCodeAllowsUsageCodeInPeriodModeOnly(t *testing.T) {
 	if err != repository.ErrRedemptionUnavailable {
 		t.Fatalf("validateRedeemableCode(period code in usage mode) error = %v, want ErrRedemptionUnavailable", err)
 	}
+
+	weeklyCode := model.RedemptionCode{
+		Status:        domainbilling.RedemptionCodeStatusActive,
+		Mode:          domainbilling.RedemptionCodeModeWeekly,
+		RewardType:    domainbilling.RedemptionRewardTypeSubscription,
+		PlanID:        2,
+		DurationUnit:  domainbilling.RedemptionDurationUnitMonth,
+		DurationCount: 3,
+		PerUserLimit:  1,
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		return validateRedeemableCode(tx, weeklyCode, 1, domainbilling.RedemptionCodeModeWeekly, now)
+	})
+	if err != nil {
+		t.Fatalf("validateRedeemableCode(weekly quarter) error = %v", err)
+	}
+	weeklyCode.DurationUnit = ""
+	weeklyCode.DurationCount = 0
+	weeklyCode.DurationDays = 30
+	err = db.Transaction(func(tx *gorm.DB) error {
+		return validateRedeemableCode(tx, weeklyCode, 1, domainbilling.RedemptionCodeModeWeekly, now)
+	})
+	if err != repository.ErrInvalidInput {
+		t.Fatalf("validateRedeemableCode(weekly fixed days) error = %v, want ErrInvalidInput", err)
+	}
 }
 
 func openBillingSQLiteTestDB(t *testing.T) *gorm.DB {

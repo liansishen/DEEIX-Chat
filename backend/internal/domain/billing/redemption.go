@@ -14,6 +14,8 @@ func RedemptionCodeModeAvailableInBillingMode(codeMode string, billingMode strin
 		default:
 			return false
 		}
+	case RedemptionCodeModeWeekly:
+		return strings.TrimSpace(codeMode) == RedemptionCodeModeWeekly
 	default:
 		return false
 	}
@@ -26,6 +28,8 @@ func RedemptionCodeModesAvailableInBillingMode(billingMode string) []string {
 		return []string{RedemptionCodeModeUsage}
 	case RedemptionCodeModePeriod:
 		return []string{RedemptionCodeModeUsage, RedemptionCodeModePeriod}
+	case RedemptionCodeModeWeekly:
+		return []string{RedemptionCodeModeWeekly}
 	default:
 		return nil
 	}

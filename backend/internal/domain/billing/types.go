@@ -28,6 +28,7 @@ type Plan struct {
 	Description         string
 	FeatureJSON         string
 	PeriodCreditNanousd int64
+	WeeklyCreditNanousd int64
 	DiscountPercent     int
 	SortOrder           int
 	IsActive            bool
@@ -171,8 +172,13 @@ type BalanceTransaction struct {
 const (
 	// RedemptionCodeModeUsage 表示按量余额兑换码。
 	RedemptionCodeModeUsage = "usage"
-	// RedemptionCodeModePeriod 表示订阅套餐兑换码。
+	// RedemptionCodeModePeriod 表示月周期订阅套餐兑换码。
 	RedemptionCodeModePeriod = "period"
+	// RedemptionCodeModeWeekly 表示统一周额度订阅套餐兑换码。
+	RedemptionCodeModeWeekly = "weekly"
+
+	// RedemptionDurationUnitMonth 表示按自然月计算的订阅期限。
+	RedemptionDurationUnitMonth = "month"
 
 	// RedemptionRewardTypeBalance 表示奖励按量余额。
 	RedemptionRewardTypeBalance = "balance"
@@ -197,6 +203,8 @@ type RedemptionCode struct {
 	RewardType      string
 	CreditNanousd   int64
 	PlanID          uint
+	DurationUnit    string
+	DurationCount   int
 	DurationDays    int
 	MaxRedemptions  *int
 	PerUserLimit    int
@@ -248,6 +256,9 @@ type UsageBalanceReservation struct {
 	PeriodLimitNanousd  int64
 	PeriodStartAt       *time.Time
 	PeriodEndAt         *time.Time
+	WeeklyCycleID       uint
+	WeeklyCreditNanousd int64
+	WeeklyLimitNanousd  int64
 	Status              string
 	UsageLedgerID       uint
 	ExpiresAt           time.Time

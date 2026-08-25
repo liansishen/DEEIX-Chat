@@ -192,6 +192,7 @@ func (r *Repo) UpdatePlanWithDefaultPrice(ctx context.Context, plan *domainbilli
 			"name":                  strings.TrimSpace(plan.Name),
 			"description":           strings.TrimSpace(plan.Description),
 			"period_credit_nanousd": clampNonNegative(plan.PeriodCreditNanousd),
+			"weekly_credit_nanousd": clampNonNegative(plan.WeeklyCreditNanousd),
 			"discount_percent":      clampPercent(plan.DiscountPercent),
 			"is_active":             true,
 			"permission_group_id":   plan.PermissionGroupID,
@@ -1000,6 +1001,8 @@ func (r *Repo) CreateRedemptionCode(ctx context.Context, item *domainbilling.Red
 		RewardType:      normalizeRedemptionRewardType(item.RewardType),
 		CreditNanousd:   clampNonNegative(item.CreditNanousd),
 		PlanID:          item.PlanID,
+		DurationUnit:    strings.TrimSpace(item.DurationUnit),
+		DurationCount:   item.DurationCount,
 		DurationDays:    item.DurationDays,
 		MaxRedemptions:  copyIntPointer(item.MaxRedemptions),
 		PerUserLimit:    item.PerUserLimit,
@@ -1113,7 +1116,9 @@ func (r *Repo) RedeemCode(ctx context.Context, input repository.RedemptionApplyI
 	}
 	now := input.SubscriptionAt
 	if now.IsZero() {
-		now = time.Now()
+		now = time.Now().UTC()
+	} else {
+		now = now.UTC()
 	}
 	var result repository.RedemptionApplyResult
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -1199,7 +1204,7 @@ func (r *Repo) GetBillingMode(ctx context.Context) (string, error) {
 	}
 	mode := strings.TrimSpace(item.Value)
 	switch mode {
-	case "self", "usage", "period":
+	case "self", "usage", "period", "weekly":
 		return mode, nil
 	default:
 		return "self", nil
@@ -2218,6 +2223,8 @@ func toDomainRedemptionCode(item model.RedemptionCode) domainbilling.RedemptionC
 		RewardType:      item.RewardType,
 		CreditNanousd:   item.CreditNanousd,
 		PlanID:          item.PlanID,
+		DurationUnit:    item.DurationUnit,
+		DurationCount:   item.DurationCount,
 		DurationDays:    item.DurationDays,
 		MaxRedemptions:  copyIntPointer(item.MaxRedemptions),
 		PerUserLimit:    item.PerUserLimit,
@@ -2280,6 +2287,15 @@ func validateRedeemableCode(tx *gorm.DB, code model.RedemptionCode, userID uint,
 		if code.RewardType != domainbilling.RedemptionRewardTypeSubscription || code.PlanID == 0 {
 			return repository.ErrInvalidInput
 		}
+		if _, err := domainbilling.ResolveRedemptionEnd(now, code.DurationUnit, code.DurationCount, code.DurationDays); err != nil {
+			return repository.ErrInvalidInput
+		}
+	case domainbilling.RedemptionCodeModeWeekly:
+		if code.RewardType != domainbilling.RedemptionRewardTypeSubscription || code.PlanID == 0 ||
+			strings.TrimSpace(code.DurationUnit) != domainbilling.RedemptionDurationUnitMonth ||
+			(code.DurationCount != 1 && code.DurationCount != 3 && code.DurationCount != 12) || code.DurationDays != 0 {
+			return repository.ErrInvalidInput
+		}
 	default:
 		return repository.ErrRedemptionUnavailable
 	}
@@ -2327,18 +2343,64 @@ func applyRedemptionSubscription(tx *gorm.DB, userID uint, code model.Redemption
 	if err != nil {
 		return nil, err
 	}
-	if code.DurationDays <= 0 {
+	grantStart, err := redemptionSubscriptionGrantStart(tx, userID, plan, now)
+	if err != nil {
+		return nil, err
+	}
+	endAt, err := domainbilling.ResolveRedemptionEnd(grantStart, code.DurationUnit, code.DurationCount, code.DurationDays)
+	if err != nil {
 		return nil, repository.ErrInvalidInput
 	}
-	duration := time.Duration(code.DurationDays) * 24 * time.Hour
 	return grantSubscriptionOnTimeline(tx, subscriptionTimelineGrantRequest{
 		UserID:   userID,
 		Plan:     plan,
 		Price:    *price,
-		StartAt:  now,
-		Duration: duration,
+		StartAt:  grantStart,
+		Duration: endAt.Sub(grantStart),
 		NewGrant: true,
 	})
+}
+
+func redemptionSubscriptionGrantStart(tx *gorm.DB, userID uint, plan model.BillingPlan, now time.Time) (time.Time, error) {
+	var existing []model.Subscription
+	if err := tx.Where("user_id = ? AND status = ? AND current_period_end_at IS NOT NULL AND current_period_end_at > ?", userID, "active", now).
+		Order("current_period_start_at ASC, current_period_end_at ASC, id ASC").
+		Find(&existing).Error; err != nil {
+		return time.Time{}, translateError(err)
+	}
+	plans, err := billingPlansForTimeline(tx, appendSubscriptionPlanID(existing, plan.ID))
+	if err != nil {
+		return time.Time{}, err
+	}
+	segments := make([]subscriptionTimelineSegment, 0, len(existing))
+	for _, item := range existing {
+		if item.CurrentPeriodEndAt == nil || !item.CurrentPeriodEndAt.After(now) {
+			continue
+		}
+		segmentPlan, ok := plans[item.PlanID]
+		if !ok {
+			return time.Time{}, repository.ErrInvalidInput
+		}
+		startAt := item.CurrentPeriodStartAt
+		if startAt.Before(now) {
+			startAt = now
+		}
+		segments = append(segments, subscriptionTimelineSegment{
+			PlanID:  item.PlanID,
+			PriceID: item.PriceID,
+			Rank:    subscriptionPlanRank(segmentPlan),
+			StartAt: startAt,
+			EndAt:   *item.CurrentPeriodEndAt,
+		})
+	}
+	cursor := now
+	for {
+		blocker, ok := nextSubscriptionTimelineBlocker(segments, subscriptionPlanRank(plan), cursor)
+		if !ok || blocker.StartAt.After(cursor) {
+			return cursor, nil
+		}
+		cursor = blocker.EndAt
+	}
 }
 
 func activeDefaultPriceForPlan(tx *gorm.DB, planID uint) (*model.BillingPrice, error) {
@@ -2837,6 +2899,8 @@ func redemptionSnapshotJSON(code model.RedemptionCode) string {
 		"reward_type":    code.RewardType,
 		"credit_nanousd": code.CreditNanousd,
 		"plan_id":        code.PlanID,
+		"duration_unit":  code.DurationUnit,
+		"duration_count": code.DurationCount,
 		"duration_days":  code.DurationDays,
 		"description":    strings.TrimSpace(code.Description),
 	}
@@ -2860,6 +2924,8 @@ func normalizeRedemptionMode(value string) string {
 	switch strings.TrimSpace(value) {
 	case domainbilling.RedemptionCodeModePeriod:
 		return domainbilling.RedemptionCodeModePeriod
+	case domainbilling.RedemptionCodeModeWeekly:
+		return domainbilling.RedemptionCodeModeWeekly
 	default:
 		return domainbilling.RedemptionCodeModeUsage
 	}
@@ -2966,6 +3032,7 @@ func toPlanDomain(item model.BillingPlan) domainbilling.Plan {
 		Description:         item.Description,
 		FeatureJSON:         item.FeatureJSON,
 		PeriodCreditNanousd: item.PeriodCreditNanousd,
+		WeeklyCreditNanousd: item.WeeklyCreditNanousd,
 		DiscountPercent:     item.DiscountPercent,
 		SortOrder:           item.SortOrder,
 		IsActive:            item.IsActive,

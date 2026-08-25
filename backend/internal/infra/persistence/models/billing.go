@@ -18,7 +18,8 @@ type BillingPlan struct {
 	Name                string `gorm:"size:64;not null;default:'';comment:套餐名称"`
 	Description         string `gorm:"size:255;not null;default:'';comment:套餐说明"`
 	FeatureJSON         string `gorm:"type:text;not null;default:'';comment:能力配置JSON"`
-	PeriodCreditNanousd int64  `gorm:"not null;default:0;comment:周期用量额度(纳美元)"`
+	PeriodCreditNanousd int64  `gorm:"not null;default:0;comment:月周期用量额度(纳美元)"`
+	WeeklyCreditNanousd int64  `gorm:"not null;default:0;comment:统一周周期用量额度(纳美元)"`
 	DiscountPercent     int    `gorm:"not null;default:0;comment:默认折扣百分比"`
 	SortOrder           int    `gorm:"not null;default:0;comment:排序权重"`
 	IsActive            bool   `gorm:"not null;default:false;index:idx_billing_plans_active;comment:是否启用"`
@@ -113,6 +114,45 @@ func (BillingAccount) TableName() string {
 	return "billing_accounts"
 }
 
+// BillingQuotaSchedule 保存统一周周期的当前指针，固定使用 ID=1 作为事务锁。
+type BillingQuotaSchedule struct {
+	BaseModel
+	CurrentCycleID uint `gorm:"not null;default:0;index:idx_billing_quota_schedules_current_cycle;comment:当前统一周周期ID"`
+}
+
+// TableName 指定表名。
+func (BillingQuotaSchedule) TableName() string {
+	return "billing_quota_schedules"
+}
+
+// BillingQuotaCycle 记录统一周额度的全局周期边界。
+type BillingQuotaCycle struct {
+	BaseModel
+	StartAt       time.Time `gorm:"not null;uniqueIndex:idx_billing_quota_cycles_start;comment:周期开始时间(UTC)"`
+	EndAt         time.Time `gorm:"not null;index:idx_billing_quota_cycles_end;comment:周期结束时间(UTC)"`
+	ResetReason   string    `gorm:"size:16;not null;index:idx_billing_quota_cycles_reason;comment:重置原因(initial/automatic/manual)"`
+	ResetByUserID uint      `gorm:"not null;default:0;index:idx_billing_quota_cycles_actor;comment:手动重置管理员ID"`
+}
+
+// TableName 指定表名。
+func (BillingQuotaCycle) TableName() string {
+	return "billing_quota_cycles"
+}
+
+// BillingWeeklyQuotaAccount 独立记录用户在统一周周期内的实际消费与预留。
+type BillingWeeklyQuotaAccount struct {
+	BaseModel
+	CycleID         uint  `gorm:"not null;uniqueIndex:idx_billing_weekly_quota_accounts_cycle_user,priority:1;index:idx_billing_weekly_quota_accounts_cycle;comment:统一周周期ID"`
+	UserID          uint  `gorm:"not null;uniqueIndex:idx_billing_weekly_quota_accounts_cycle_user,priority:2;index:idx_billing_weekly_quota_accounts_user;comment:用户ID"`
+	UsedNanousd     int64 `gorm:"not null;default:0;comment:周期内已结算用量(纳美元)"`
+	ReservedNanousd int64 `gorm:"not null;default:0;comment:周期内活跃预留用量(纳美元)"`
+}
+
+// TableName 指定表名。
+func (BillingWeeklyQuotaAccount) TableName() string {
+	return "billing_weekly_quota_accounts"
+}
+
 // BalanceTransaction 记录余额变动流水。
 type BalanceTransaction struct {
 	BaseModel
@@ -143,6 +183,9 @@ type UsageReservation struct {
 	PeriodLimitNanousd  int64      `gorm:"not null;default:0;comment:周期总额度快照(纳美元)"`
 	PeriodStartAt       *time.Time `gorm:"index:idx_billing_usage_reservations_period;comment:周期开始时间"`
 	PeriodEndAt         *time.Time `gorm:"index:idx_billing_usage_reservations_period;comment:周期结束时间"`
+	WeeklyCycleID       uint       `gorm:"not null;default:0;index:idx_billing_usage_reservations_weekly_cycle;comment:统一周周期ID"`
+	WeeklyCreditNanousd int64      `gorm:"not null;default:0;comment:预留统一周额度预算(纳美元)"`
+	WeeklyLimitNanousd  int64      `gorm:"not null;default:0;comment:统一周总额度快照(纳美元)"`
 	Status              string     `gorm:"size:24;not null;index:idx_billing_usage_reservations_user_status;comment:状态(active/settled/released/reconciliation)"`
 	UsageLedgerID       uint       `gorm:"not null;default:0;index:idx_billing_usage_reservations_ledger_id;comment:结算用量账本ID"`
 	ExpiresAt           time.Time  `gorm:"not null;index:idx_billing_usage_reservations_expires_at;comment:预算占用过期时间"`
@@ -163,11 +206,13 @@ type RedemptionCode struct {
 	CodeHash        string     `gorm:"size:64;not null;uniqueIndex:idx_billing_redemption_codes_hash;comment:兑换码HMAC-SHA256哈希"`
 	CodeEncrypted   string     `gorm:"type:text;not null;default:'';comment:AES-GCM加密后的兑换码明文"`
 	CodeHint        string     `gorm:"size:32;not null;default:'';comment:兑换码展示提示，不包含完整明文"`
-	Mode            string     `gorm:"size:16;not null;default:'usage';index:idx_billing_redemption_codes_mode;comment:适用计费模式(usage/period)"`
+	Mode            string     `gorm:"size:16;not null;default:'usage';index:idx_billing_redemption_codes_mode;comment:适用计费模式(usage/period/weekly)"`
 	RewardType      string     `gorm:"size:32;not null;default:'balance';index:idx_billing_redemption_codes_reward_type;comment:奖励类型(balance/subscription)"`
 	CreditNanousd   int64      `gorm:"not null;default:0;comment:余额奖励金额(纳美元)"`
 	PlanID          uint       `gorm:"not null;default:0;index:idx_billing_redemption_codes_plan_id;comment:订阅套餐ID"`
-	DurationDays    int        `gorm:"not null;default:0;comment:订阅有效天数"`
+	DurationUnit    string     `gorm:"size:16;not null;default:'';comment:订阅自然期限单位(month)"`
+	DurationCount   int        `gorm:"not null;default:0;comment:订阅自然期限数量"`
+	DurationDays    int        `gorm:"not null;default:0;comment:旧版订阅有效天数"`
 	MaxRedemptions  *int       `gorm:"comment:总兑换次数上限，空表示不限"`
 	PerUserLimit    int        `gorm:"not null;default:1;comment:单用户兑换次数上限"`
 	RedeemedCount   int        `gorm:"not null;default:0;comment:已兑换次数"`

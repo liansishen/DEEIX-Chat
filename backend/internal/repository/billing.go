@@ -56,6 +56,14 @@ type BillingRepository interface {
 	SumBillableNanousd(ctx context.Context, userID uint, startAt time.Time, endAt time.Time) (int64, error)
 }
 
+// WeeklyQuotaRepository 定义统一周额度周期及独立用户计数的持久化能力。
+type WeeklyQuotaRepository interface {
+	EnsureWeeklyQuotaCycle(ctx context.Context, now time.Time, initialResetAt time.Time) (*domainbilling.WeeklyQuotaCycle, error)
+	SetWeeklyQuotaNextReset(ctx context.Context, now time.Time, nextResetAt time.Time) (*domainbilling.WeeklyQuotaCycle, error)
+	ResetWeeklyQuotaCycle(ctx context.Context, now time.Time, actorUserID uint) (*domainbilling.WeeklyQuotaCycle, error)
+	GetOrCreateWeeklyQuotaAccount(ctx context.Context, cycleID uint, userID uint) (*domainbilling.WeeklyQuotaAccount, error)
+}
+
 // RedemptionCodeListFilter 描述管理员兑换码列表筛选条件。
 type RedemptionCodeListFilter struct {
 	Mode         string

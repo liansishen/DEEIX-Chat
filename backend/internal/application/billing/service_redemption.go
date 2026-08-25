@@ -34,6 +34,8 @@ type RedemptionCodeInput struct {
 	Mode           string
 	CreditUSD      float64
 	PlanID         uint
+	DurationUnit   string
+	DurationCount  int
 	DurationDays   int
 	MaxRedemptions *int
 	PerUserLimit   int
@@ -120,7 +122,7 @@ func (s *Service) ListRedemptionCodes(ctx context.Context, input RedemptionCodeL
 			return nil, 0, err
 		}
 		currentMode = strings.TrimSpace(modeValue)
-		if currentMode != domainbilling.RedemptionCodeModeUsage && currentMode != domainbilling.RedemptionCodeModePeriod {
+		if currentMode != domainbilling.RedemptionCodeModeUsage && currentMode != domainbilling.RedemptionCodeModePeriod && currentMode != domainbilling.RedemptionCodeModeWeekly {
 			return []RedemptionCodeView{}, 0, nil
 		}
 		if mode != "" && !domainbilling.RedemptionCodeModeAvailableInBillingMode(mode, currentMode) {
@@ -210,6 +212,8 @@ func (s *Service) CreateRedemptionCodes(ctx context.Context, actorUserID uint, i
 			RewardType:      normalized.RewardType,
 			CreditNanousd:   normalized.CreditNanousd,
 			PlanID:          normalized.PlanID,
+			DurationUnit:    normalized.DurationUnit,
+			DurationCount:   normalized.DurationCount,
 			DurationDays:    normalized.DurationDays,
 			MaxRedemptions:  copyIntPointer(normalized.MaxRedemptions),
 			PerUserLimit:    normalized.PerUserLimit,
@@ -318,10 +322,10 @@ func (s *Service) RedeemCode(ctx context.Context, userID uint, code string) (*Re
 	if err != nil {
 		return nil, err
 	}
-	if mode != domainbilling.RedemptionCodeModeUsage && mode != domainbilling.RedemptionCodeModePeriod {
+	if mode != domainbilling.RedemptionCodeModeUsage && mode != domainbilling.RedemptionCodeModePeriod && mode != domainbilling.RedemptionCodeModeWeekly {
 		return nil, ErrRedemptionCodeUnavailable
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	result, err := s.repo.RedeemCode(ctx, repository.RedemptionApplyInput{
 		CodeHash:       codeHash,
 		UserID:         userID,
@@ -347,6 +351,8 @@ type normalizedRedemptionCodeInput struct {
 	RewardType     string
 	CreditNanousd  int64
 	PlanID         uint
+	DurationUnit   string
+	DurationCount  int
 	DurationDays   int
 	MaxRedemptions *int
 	PerUserLimit   int
@@ -404,7 +410,7 @@ func (s *Service) normalizeRedemptionCodeInput(ctx context.Context, input Redemp
 			ExpiresAt:      input.ExpiresAt,
 			Description:    strings.TrimSpace(input.Description),
 		}, nil
-	case domainbilling.RedemptionCodeModePeriod:
+	case domainbilling.RedemptionCodeModePeriod, domainbilling.RedemptionCodeModeWeekly:
 		if input.PlanID == 0 {
 			return normalizedRedemptionCodeInput{}, redemptionCodeValidationError("planID", "plan")
 		}
@@ -415,12 +421,22 @@ func (s *Service) normalizeRedemptionCodeInput(ctx context.Context, input Redemp
 			}
 			return normalizedRedemptionCodeInput{}, err
 		}
-		if !plan.IsActive || strings.TrimSpace(plan.Code) == "free" {
+		if !plan.IsActive || strings.TrimSpace(plan.Code) == "free" || (mode == domainbilling.RedemptionCodeModeWeekly && plan.WeeklyCreditNanousd <= 0) {
 			return normalizedRedemptionCodeInput{}, redemptionCodeValidationError("planID", "plan")
 		}
+		durationUnit := strings.TrimSpace(input.DurationUnit)
+		durationCount := input.DurationCount
 		durationDays := input.DurationDays
-		if durationDays <= 0 {
-			return normalizedRedemptionCodeInput{}, redemptionCodeValidationError("durationDays", "duration")
+		if mode == domainbilling.RedemptionCodeModeWeekly {
+			if durationUnit != domainbilling.RedemptionDurationUnitMonth || durationDays != 0 || (durationCount != 1 && durationCount != 3 && durationCount != 12) {
+				return normalizedRedemptionCodeInput{}, redemptionCodeValidationError("durationCount", "duration")
+			}
+		} else if durationUnit == "" {
+			if durationCount != 0 || durationDays <= 0 {
+				return normalizedRedemptionCodeInput{}, redemptionCodeValidationError("durationDays", "duration")
+			}
+		} else if durationUnit != domainbilling.RedemptionDurationUnitMonth || durationDays != 0 || (durationCount != 1 && durationCount != 3 && durationCount != 12) {
+			return normalizedRedemptionCodeInput{}, redemptionCodeValidationError("durationCount", "duration")
 		}
 		return normalizedRedemptionCodeInput{
 			Code:           code,
@@ -428,6 +444,8 @@ func (s *Service) normalizeRedemptionCodeInput(ctx context.Context, input Redemp
 			Mode:           mode,
 			RewardType:     domainbilling.RedemptionRewardTypeSubscription,
 			PlanID:         input.PlanID,
+			DurationUnit:   durationUnit,
+			DurationCount:  durationCount,
 			DurationDays:   durationDays,
 			MaxRedemptions: maxRedemptions,
 			PerUserLimit:   perUserLimit,
@@ -520,6 +538,8 @@ func normalizeRedemptionMode(value string) string {
 		return domainbilling.RedemptionCodeModeUsage
 	case domainbilling.RedemptionCodeModePeriod:
 		return domainbilling.RedemptionCodeModePeriod
+	case domainbilling.RedemptionCodeModeWeekly:
+		return domainbilling.RedemptionCodeModeWeekly
 	default:
 		return ""
 	}
