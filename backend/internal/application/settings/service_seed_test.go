@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"testing"
 
 	domainsettings "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/domain/settings"
@@ -60,6 +61,18 @@ func (r *settingsSeedRepo) UpsertWithDescription(_ context.Context, items []doma
 func (r *settingsSeedRepo) Delete(_ context.Context, namespace string, key string) error {
 	delete(r.items, namespace+":"+key)
 	return nil
+}
+
+func TestSeedBillingModeDescriptionIncludesWeekly(t *testing.T) {
+	for _, item := range defaultSettings() {
+		if item.Namespace == "billing" && item.Key == "mode" {
+			if !strings.Contains(item.Description, "weekly") {
+				t.Fatalf("billing mode description = %q, want weekly", item.Description)
+			}
+			return
+		}
+	}
+	t.Fatal("billing mode default not found")
 }
 
 func TestSeedMigratesLegacyDefaultAllowedMIMETypes(t *testing.T) {

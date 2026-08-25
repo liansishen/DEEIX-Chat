@@ -908,7 +908,7 @@ func (s *Service) PatchUserByAdmin(
 		if modeErr != nil {
 			return nil, modeErr
 		}
-		if billingMode != "period" {
+		if billingMode != "period" && billingMode != "weekly" {
 			return nil, billing.ErrPaymentRequired
 		}
 

@@ -425,10 +425,10 @@ func validatePatchItem(item PatchItem) error {
 	switch key {
 	case "billing:mode":
 		switch value {
-		case "self", "period", "usage":
+		case "self", "period", "usage", "weekly":
 			return nil
 		default:
-			return fmt.Errorf("%s must be one of: self, period, usage", key)
+			return fmt.Errorf("%s must be one of: self, period, usage, weekly", key)
 		}
 	case "billing:payment_providers":
 		for _, provider := range normalizePaymentProvidersSetting(value) {

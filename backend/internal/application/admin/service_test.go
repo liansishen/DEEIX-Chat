@@ -167,6 +167,22 @@ func TestBuildUserViewsUsageModeKeepsAccountOnlyView(t *testing.T) {
 	}
 }
 
+func TestPatchUserByAdminAllowsWeeklySubscriptionUpdate(t *testing.T) {
+	users := newAdminUserServiceFake(map[uint]domainuser.User{
+		1: {ID: 1, Role: domainuser.RoleAdmin},
+		2: {ID: 2, Role: domainuser.RoleUser},
+	})
+	service := NewService(users, auditServiceFake{})
+	service.SetSubscriptionResolver(subscriptionResolverFake{billingMode: "weekly"})
+	tier := "pro"
+	if _, err := service.PatchUserByAdmin(
+		context.Background(), "req_weekly", 1, 2,
+		PatchUserInput{SubscriptionTier: &tier}, "127.0.0.1", "test",
+	); err != nil {
+		t.Fatalf("expected weekly subscription update to succeed, got %v", err)
+	}
+}
+
 func TestPatchUserByAdminAllowsAdditionalSuperAdmin(t *testing.T) {
 	users := newAdminUserServiceFake(map[uint]domainuser.User{
 		1: {ID: 1, Role: domainuser.RoleSuperAdmin},

@@ -2733,33 +2733,12 @@ func (s *Service) GetBillingOverview(ctx context.Context, userID uint, now time.
 	if remainingNanousd < 0 {
 		remainingNanousd = 0
 	}
-	planView := BillingPlanView{
-		ID:                  plan.ID,
-		Code:                plan.Code,
-		Name:                plan.Name,
-		Description:         plan.Description,
-		FeatureJSON:         plan.FeatureJSON,
-		PeriodCreditNanousd: plan.PeriodCreditNanousd,
-		WeeklyCreditNanousd: plan.WeeklyCreditNanousd,
-		DiscountPercent:     plan.DiscountPercent,
-		SortOrder:           plan.SortOrder,
-		IsActive:            plan.IsActive,
-	}
 	prices, priceErr := s.repo.ListActivePricesByPlanIDs(ctx, []uint{plan.ID})
 	if priceErr != nil {
 		return nil, priceErr
 	}
-	for _, price := range prices {
-		planView.Prices = append(planView.Prices, BillingPriceView{
-			ID:              price.ID,
-			PlanID:          price.PlanID,
-			Code:            price.Code,
-			BillingInterval: price.BillingInterval,
-			Currency:        price.Currency,
-			AmountCents:     price.AmountCents,
-			IsDefault:       price.IsDefault,
-		})
-	}
+	planView := billingPlanViewFromDomain(plan)
+	planView.Prices = billingPriceViews(prices)
 	subscriptions, planMap, err := s.listSubscriptionEntitlements(ctx, []uint{userID}, now)
 	if err != nil {
 		return nil, err
@@ -2779,7 +2758,7 @@ func (s *Service) GetBillingOverview(ctx context.Context, userID uint, now time.
 func (s *Service) getWeeklyBillingOverview(ctx context.Context, userID uint, now time.Time, overview *BillingOverview) (*BillingOverview, error) {
 	overview.WeeklyExhausted = true
 	if s.weeklyQuota == nil {
-		return overview, nil
+		return nil, repository.ErrInvalidInput
 	}
 	now = now.UTC()
 	cycle, err := s.weeklyQuota.EnsureWeeklyQuotaCycle(ctx, now, time.Time{})
@@ -2800,7 +2779,12 @@ func (s *Service) getWeeklyBillingOverview(ctx context.Context, userID uint, now
 	}
 	if current, ok := selectCurrentSubscription(subscriptions, planMap, now); ok {
 		if plan, exists := planMap[current.PlanID]; exists {
+			prices, priceErr := s.repo.ListActivePricesByPlanIDs(ctx, []uint{plan.ID})
+			if priceErr != nil {
+				return nil, priceErr
+			}
 			view := billingPlanViewFromDomain(plan)
+			view.Prices = billingPriceViews(prices)
 			overview.Plan = &view
 			overview.WeeklyCreditNanousd = plan.WeeklyCreditNanousd
 		}
@@ -2821,6 +2805,18 @@ func billingPlanViewFromDomain(plan domainbilling.Plan) BillingPlanView {
 		WeeklyCreditNanousd: plan.WeeklyCreditNanousd, DiscountPercent: plan.DiscountPercent,
 		SortOrder: plan.SortOrder, IsActive: plan.IsActive, PermissionGroupID: plan.PermissionGroupID,
 	}
+}
+
+func billingPriceViews(prices []domainbilling.Price) []BillingPriceView {
+	views := make([]BillingPriceView, 0, len(prices))
+	for _, price := range prices {
+		views = append(views, BillingPriceView{
+			ID: price.ID, PlanID: price.PlanID, Code: price.Code,
+			BillingInterval: price.BillingInterval, Currency: price.Currency,
+			AmountCents: price.AmountCents, IsDefault: price.IsDefault,
+		})
+	}
+	return views
 }
 
 // GetWeeklyQuotaCycle returns the current shared UTC cycle.

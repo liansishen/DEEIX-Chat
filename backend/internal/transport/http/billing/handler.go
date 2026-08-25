@@ -133,9 +133,11 @@ func (h *Handler) loadBillingConfig(ctx context.Context) (BillingConfigResponse,
 	}
 	var weeklyNextResetAt *time.Time
 	if mode == "weekly" {
-		if cycle, weeklyErr := h.service.GetWeeklyQuotaCycle(ctx, time.Now().UTC()); weeklyErr == nil {
-			weeklyNextResetAt = &cycle.EndAt
+		cycle, weeklyErr := h.service.GetWeeklyQuotaCycle(ctx, time.Now().UTC())
+		if weeklyErr != nil {
+			return BillingConfigResponse{}, weeklyErr
 		}
+		weeklyNextResetAt = &cycle.EndAt
 	}
 	return BillingConfigResponse{
 		Mode:                     mode,
@@ -411,7 +413,7 @@ func (h *Handler) UpdateBillingAccountBalance(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param mode query string false "计费模式：usage/period"
+// @Param mode query string false "计费模式：usage/period/weekly"
 // @Param status query string false "状态：active/inactive"
 // @Param availability query string false "可兑换性：available/expired/exhausted"
 // @Param q query string false "搜索关键词"

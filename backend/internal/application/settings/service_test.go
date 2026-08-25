@@ -2,6 +2,7 @@ package settings
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	domainsettings "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/domain/settings"
@@ -43,6 +44,15 @@ func (r *testSettingsRepo) UpsertWithDescription(ctx context.Context, items []do
 
 func (r *testSettingsRepo) Delete(ctx context.Context, namespace, key string) error {
 	return nil
+}
+
+func TestValidatePatchItemAcceptsWeeklyBillingMode(t *testing.T) {
+	if err := validatePatchItem(PatchItem{Namespace: "billing", Key: "mode", Value: "weekly"}); err != nil {
+		t.Fatalf("weekly billing mode validation error: %v", err)
+	}
+	if err := validatePatchItem(PatchItem{Namespace: "billing", Key: "mode", Value: "invalid"}); err == nil || !strings.Contains(err.Error(), "weekly") {
+		t.Fatalf("invalid billing mode error = %v, want weekly in allowed values", err)
+	}
 }
 
 func TestApplyEmbeddingDependentCascadesDisablesRAGAndSemanticFeatures(t *testing.T) {

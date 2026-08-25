@@ -294,7 +294,7 @@ func (r *billingRepositoryStub) ListActivePlans(context.Context) ([]domainbillin
 	panic("not used")
 }
 func (r *billingRepositoryStub) ListActivePricesByPlanIDs(context.Context, []uint) ([]domainbilling.Price, error) {
-	panic("not used")
+	return r.prices, nil
 }
 func (r *billingRepositoryStub) GetPriceByID(_ context.Context, id uint) (*domainbilling.Price, error) {
 	for _, item := range r.prices {
@@ -485,6 +485,25 @@ func TestGetBillingOverviewWeeklyReturnsZeroExhaustedWithoutSubscription(t *test
 	}
 	if overview.WeeklyCreditNanousd != 0 || overview.WeeklyUsedNanousd != 25 || !overview.WeeklyExhausted {
 		t.Fatalf("weekly zero overview = %+v", overview)
+	}
+}
+
+func TestGetBillingOverviewWeeklyIncludesCurrentPlanPrices(t *testing.T) {
+	now := time.Now().UTC()
+	end := now.Add(30 * 24 * time.Hour)
+	repo := &billingRepositoryStub{
+		mode:          "weekly",
+		weeklyAccount: &domainbilling.WeeklyQuotaAccount{UsedNanousd: 25},
+		plans:         []domainbilling.Plan{{ID: 2, Code: "pro", Name: "Pro", WeeklyCreditNanousd: 1000, IsActive: true}},
+		prices:        []domainbilling.Price{{ID: 3, PlanID: 2, Code: "pro-month", BillingInterval: domainbilling.IntervalMonth, Currency: "USD", AmountCents: 999, IsActive: true, IsDefault: true}},
+		subscriptions: []domainbilling.Subscription{{UserID: 1, PlanID: 2, Status: "active", CurrentPeriodStartAt: now.Add(-time.Hour), CurrentPeriodEndAt: &end}},
+	}
+	overview, err := NewService(repo).GetBillingOverview(context.Background(), 1, now)
+	if err != nil {
+		t.Fatalf("GetBillingOverview() error = %v", err)
+	}
+	if overview.Plan == nil || overview.Plan.WeeklyCreditNanousd != 1000 || len(overview.Plan.Prices) != 1 || overview.Plan.Prices[0].ID != 3 {
+		t.Fatalf("weekly overview plan = %+v, want weekly credit and active price", overview.Plan)
 	}
 }
 
