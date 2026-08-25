@@ -390,7 +390,7 @@ export interface BillingConfigDataResponse {
 
 export interface BillingConfigRequest {
   displayCurrency?: "USD" | "CNY";
-  mode: "self" | "period" | "weekly" | "usage";
+  mode: "self" | "period" | "usage" | "weekly";
   nativeToolBillingEnabled?: boolean;
   nativeToolPricing?: NativeToolPricingRequest[];
   /** @min 0 */
@@ -416,27 +416,6 @@ export interface BillingConfigResponseDoc {
   errorMsg: string;
 }
 
-export interface WeeklyQuotaCycleResponse {
-  id: number;
-  startAt: string;
-  endAt: string;
-  resetReason: string;
-  resetByUserID: number | null;
-}
-
-export interface WeeklyQuotaCycleDataResponse {
-  cycle: WeeklyQuotaCycleResponse;
-}
-
-export interface UpdateWeeklyQuotaResetTimeRequest {
-  nextResetAt: string;
-}
-
-export interface WeeklyQuotaCycleResponseDoc {
-  data: WeeklyQuotaCycleDataResponse;
-  errorMsg: string;
-}
-
 export interface BillingErrorDoc {
   data: any;
   details?: any;
@@ -452,16 +431,6 @@ export interface BillingOverviewDataResponse {
 export interface BillingOverviewResponse {
   account: BillingAccountResponse | null;
   mode: string;
-  weeklyCreditNanousd: number;
-  weeklyCreditUSD: number;
-  weeklyEndAt: string | null;
-  weeklyExhausted: boolean;
-  weeklyNextResetAt: string | null;
-  weeklyRemainingNanousd: number;
-  weeklyRemainingUSD: number;
-  weeklyStartAt: string | null;
-  weeklyUsedNanousd: number;
-  weeklyUsedUSD: number;
   periodCreditNanousd: number;
   periodCreditUSD: number;
   periodEndAt: string | null;
@@ -472,6 +441,16 @@ export interface BillingOverviewResponse {
   periodUsedUSD: number;
   plan: BillingPlanResponse | null;
   subscriptionEntitlements: SubscriptionEntitlementResponse[];
+  weeklyCreditNanousd: number;
+  weeklyCreditUSD: number;
+  weeklyEndAt: string | null;
+  weeklyExhausted: boolean;
+  weeklyNextResetAt: string | null;
+  weeklyRemainingNanousd: number;
+  weeklyRemainingUSD: number;
+  weeklyStartAt: string | null;
+  weeklyUsedNanousd: number;
+  weeklyUsedUSD: number;
 }
 
 export interface BillingOverviewResponseDoc {
@@ -496,6 +475,8 @@ export interface BillingPlanResponse {
   permissionGroupID: number | null;
   prices: BillingPriceResponse[];
   sortOrder: number;
+  weeklyCreditNanousd: number;
+  weeklyCreditUSD: number;
 }
 
 export interface BillingPlanResponseDoc {
@@ -1203,17 +1184,17 @@ export interface CreateRedemptionCodeRequest {
   creditUSD?: number;
   /** @maxLength 255 */
   description?: string;
+  durationCount?: 1 | 3 | 12;
   /**
    * @min 0
    * @max 3660
    */
   durationDays?: number;
+  durationUnit?: "month";
   expiresAt?: string | null;
   /** @min 1 */
   maxRedemptions?: number;
   mode: "usage" | "period" | "weekly";
-  durationUnit?: "month";
-  durationCount?: 1 | 3 | 12;
   /**
    * @min 1
    * @max 100
@@ -2854,13 +2835,13 @@ export interface RedemptionCodeResponse {
   creditNanousd: number;
   creditUSD: number;
   description: string;
+  durationCount: number;
   durationDays: number;
+  durationUnit: string;
   expiresAt: string | null;
   id: number;
   maxRedemptions: number | null;
   mode: string;
-  durationUnit: string;
-  durationCount: number;
   perUserLimit: number;
   planID: number;
   redeemedCount: number;
@@ -2876,8 +2857,6 @@ export interface RedemptionCodeResponseDoc {
 }
 
 export interface RedemptionResponse {
-  durationUnit: string;
-  durationCount: number;
   balanceTransactionID: number;
   codeID: number;
   createdAt: string;
@@ -3412,9 +3391,9 @@ export interface UpdateBillingPlanRequest {
   name: string;
   /** @min 0 */
   periodCreditUSD: number;
+  permissionGroupID?: number | null;
   /** @min 0 */
   weeklyCreditUSD?: number;
-  permissionGroupID?: number | null;
 }
 
 export interface UpdateConversationLabelsRequest {
@@ -3622,6 +3601,10 @@ export interface UpdateUserStatusRequest {
 export interface UpdateUserStatusResponseDoc {
   data: UserDataResponse;
   errorMsg: string;
+}
+
+export interface UpdateWeeklyQuotaResetTimeRequest {
+  nextResetAt: string;
 }
 
 export interface UploadFileResponseDoc {
@@ -4154,6 +4137,23 @@ export interface UserSettingsResponseDoc {
   errorMsg: string;
 }
 
+export interface WeeklyQuotaCycleDataResponse {
+  cycle: WeeklyQuotaCycleResponse;
+}
+
+export interface WeeklyQuotaCycleResponse {
+  endAt: string;
+  id: number;
+  resetByUserID: number | null;
+  resetReason: string;
+  startAt: string;
+}
+
+export interface WeeklyQuotaCycleResponseDoc {
+  data: WeeklyQuotaCycleDataResponse;
+  errorMsg: string;
+}
+
 export interface WriteKnowledgeBaseRequest {
   /** @maxLength 255 */
   description?: string;
@@ -4456,51 +4456,6 @@ export namespace Admin {
   }
 
   /**
-   * @description 查询每周额度周期
-   * @tags admin-billing
-   * @name BillingWeeklyQuotaResetTimeList
-   * @request GET:/admin/billing/weekly-quota/reset-time
-   * @secure
-   */
-  export namespace BillingWeeklyQuotaResetTimeList {
-    export type RequestParams = {};
-    export type RequestQuery = {};
-    export type RequestBody = never;
-    export type RequestHeaders = {};
-    export type ResponseBody = WeeklyQuotaCycleResponseDoc;
-  }
-
-  /**
-   * @description 设置每周额度下一次重置时间
-   * @tags admin-billing
-   * @name BillingWeeklyQuotaResetTimePartialUpdate
-   * @request PATCH:/admin/billing/weekly-quota/reset-time
-   * @secure
-   */
-  export namespace BillingWeeklyQuotaResetTimePartialUpdate {
-    export type RequestParams = {};
-    export type RequestQuery = {};
-    export type RequestBody = UpdateWeeklyQuotaResetTimeRequest;
-    export type RequestHeaders = {};
-    export type ResponseBody = WeeklyQuotaCycleResponseDoc;
-  }
-
-  /**
-   * @description 手动重置每周额度
-   * @tags admin-billing
-   * @name BillingWeeklyQuotaResetCreate
-   * @request POST:/admin/billing/weekly-quota/reset
-   * @secure
-   */
-  export namespace BillingWeeklyQuotaResetCreate {
-    export type RequestParams = {};
-    export type RequestQuery = {};
-    export type RequestBody = never;
-    export type RequestHeaders = {};
-    export type ResponseBody = WeeklyQuotaCycleResponseDoc;
-  }
-
-  /**
    * @description 按平台模型名查询模型按量计费配置
    * @tags admin-billing
    * @name BillingModelPricesList
@@ -4590,7 +4545,7 @@ export namespace Admin {
     export type RequestQuery = {
       /** 可兑换性：available/expired/exhausted */
       availability?: string;
-      /** 计费模式：usage/period */
+      /** 计费模式：usage/period/weekly */
       mode?: string;
       /** 页码 */
       page?: number;
@@ -4693,6 +4648,54 @@ export namespace Admin {
     export type RequestBody = never;
     export type RequestHeaders = {};
     export type ResponseBody = RedemptionCodeResponseDoc;
+  }
+
+  /**
+   * @description 立即开始新的统一周额度周期，周期结束时间为当前 UTC 时间加七天
+   * @tags admin-billing
+   * @name BillingWeeklyQuotaResetCreate
+   * @summary 立即重置统一周额度
+   * @request POST:/admin/billing/weekly-quota/reset
+   * @secure
+   */
+  export namespace BillingWeeklyQuotaResetCreate {
+    export type RequestParams = {};
+    export type RequestQuery = {};
+    export type RequestBody = never;
+    export type RequestHeaders = {};
+    export type ResponseBody = WeeklyQuotaCycleResponseDoc;
+  }
+
+  /**
+   * @description 获取当前统一周额度周期及其 UTC 重置时间
+   * @tags admin-billing
+   * @name BillingWeeklyQuotaResetTimeList
+   * @summary 获取统一周额度重置时间
+   * @request GET:/admin/billing/weekly-quota/reset-time
+   * @secure
+   */
+  export namespace BillingWeeklyQuotaResetTimeList {
+    export type RequestParams = {};
+    export type RequestQuery = {};
+    export type RequestBody = never;
+    export type RequestHeaders = {};
+    export type ResponseBody = WeeklyQuotaCycleResponseDoc;
+  }
+
+  /**
+   * @description 设置当前统一周额度周期的 UTC 重置时间，不清除已有用量
+   * @tags admin-billing
+   * @name BillingWeeklyQuotaResetTimePartialUpdate
+   * @summary 设置统一周额度重置时间
+   * @request PATCH:/admin/billing/weekly-quota/reset-time
+   * @secure
+   */
+  export namespace BillingWeeklyQuotaResetTimePartialUpdate {
+    export type RequestParams = {};
+    export type RequestQuery = {};
+    export type RequestBody = UpdateWeeklyQuotaResetTimeRequest;
+    export type RequestHeaders = {};
+    export type ResponseBody = WeeklyQuotaCycleResponseDoc;
   }
 
   /**

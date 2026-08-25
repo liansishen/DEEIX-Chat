@@ -953,7 +953,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "计费模式：usage/period",
+                        "description": "计费模式：usage/period/weekly",
                         "name": "mode",
                         "in": "query"
                     },
@@ -1251,6 +1251,129 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/BillingErrorDoc"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/BillingErrorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/billing/weekly-quota/reset": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "立即开始新的统一周额度周期，周期结束时间为当前 UTC 时间加七天",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-billing"
+                ],
+                "summary": "立即重置统一周额度",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/WeeklyQuotaCycleResponseDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/BillingErrorDoc"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/BillingErrorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/billing/weekly-quota/reset-time": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取当前统一周额度周期及其 UTC 重置时间",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-billing"
+                ],
+                "summary": "获取统一周额度重置时间",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/WeeklyQuotaCycleResponseDoc"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/BillingErrorDoc"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "设置当前统一周额度周期的 UTC 重置时间，不清除已有用量",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-billing"
+                ],
+                "summary": "设置统一周额度重置时间",
+                "parameters": [
+                    {
+                        "description": "UTC 重置时间",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateWeeklyQuotaResetTimeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/WeeklyQuotaCycleResponseDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/BillingErrorDoc"
                         }
@@ -15147,7 +15270,8 @@ const docTemplate = `{
                     "enum": [
                         "self",
                         "period",
-                        "usage"
+                        "usage",
+                        "weekly"
                     ]
                 },
                 "nativeToolBillingEnabled": {
@@ -15179,7 +15303,8 @@ const docTemplate = `{
                 "paymentProviders",
                 "prepaidAmountNanousd",
                 "prepaidAmountUSD",
-                "usdToCNYRate"
+                "usdToCNYRate",
+                "weeklyNextResetAt"
             ],
             "properties": {
                 "displayCurrency": {
@@ -15217,6 +15342,11 @@ const docTemplate = `{
                 },
                 "usdToCNYRate": {
                     "type": "number"
+                },
+                "weeklyNextResetAt": {
+                    "type": "string",
+                    "x-nullable": true,
+                    "x-omitempty": false
                 }
             }
         },
@@ -15280,7 +15410,17 @@ const docTemplate = `{
                 "periodUsedNanousd",
                 "periodUsedUSD",
                 "plan",
-                "subscriptionEntitlements"
+                "subscriptionEntitlements",
+                "weeklyCreditNanousd",
+                "weeklyCreditUSD",
+                "weeklyEndAt",
+                "weeklyExhausted",
+                "weeklyNextResetAt",
+                "weeklyRemainingNanousd",
+                "weeklyRemainingUSD",
+                "weeklyStartAt",
+                "weeklyUsedNanousd",
+                "weeklyUsedUSD"
             ],
             "properties": {
                 "account": {
@@ -15337,6 +15477,42 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/SubscriptionEntitlementResponse"
                     }
+                },
+                "weeklyCreditNanousd": {
+                    "type": "integer"
+                },
+                "weeklyCreditUSD": {
+                    "type": "number"
+                },
+                "weeklyEndAt": {
+                    "type": "string",
+                    "x-nullable": true,
+                    "x-omitempty": false
+                },
+                "weeklyExhausted": {
+                    "type": "boolean"
+                },
+                "weeklyNextResetAt": {
+                    "type": "string",
+                    "x-nullable": true,
+                    "x-omitempty": false
+                },
+                "weeklyRemainingNanousd": {
+                    "type": "integer"
+                },
+                "weeklyRemainingUSD": {
+                    "type": "number"
+                },
+                "weeklyStartAt": {
+                    "type": "string",
+                    "x-nullable": true,
+                    "x-omitempty": false
+                },
+                "weeklyUsedNanousd": {
+                    "type": "integer"
+                },
+                "weeklyUsedUSD": {
+                    "type": "number"
                 }
             }
         },
@@ -15380,7 +15556,9 @@ const docTemplate = `{
                 "periodCreditUSD",
                 "permissionGroupID",
                 "prices",
-                "sortOrder"
+                "sortOrder",
+                "weeklyCreditNanousd",
+                "weeklyCreditUSD"
             ],
             "properties": {
                 "code": {
@@ -15423,6 +15601,12 @@ const docTemplate = `{
                 },
                 "sortOrder": {
                     "type": "integer"
+                },
+                "weeklyCreditNanousd": {
+                    "type": "integer"
+                },
+                "weeklyCreditUSD": {
+                    "type": "number"
                 }
             }
         },
@@ -17720,10 +17904,24 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255
                 },
+                "durationCount": {
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        3,
+                        12
+                    ]
+                },
                 "durationDays": {
                     "type": "integer",
                     "maximum": 3660,
                     "minimum": 0
+                },
+                "durationUnit": {
+                    "type": "string",
+                    "enum": [
+                        "month"
+                    ]
                 },
                 "expiresAt": {
                     "type": "string",
@@ -17737,7 +17935,8 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "usage",
-                        "period"
+                        "period",
+                        "weekly"
                     ]
                 },
                 "perUserLimit": {
@@ -22830,7 +23029,9 @@ const docTemplate = `{
                 "creditNanousd",
                 "creditUSD",
                 "description",
+                "durationCount",
                 "durationDays",
+                "durationUnit",
                 "expiresAt",
                 "id",
                 "maxRedemptions",
@@ -22865,8 +23066,14 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "durationCount": {
+                    "type": "integer"
+                },
                 "durationDays": {
                     "type": "integer"
+                },
+                "durationUnit": {
+                    "type": "string"
                 },
                 "expiresAt": {
                     "type": "string",
@@ -24607,6 +24814,10 @@ const docTemplate = `{
                 "permissionGroupID": {
                     "type": "integer",
                     "x-nullable": true
+                },
+                "weeklyCreditUSD": {
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },
@@ -25116,6 +25327,17 @@ const docTemplate = `{
                     "$ref": "#/definitions/UserDataResponse"
                 },
                 "errorMsg": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdateWeeklyQuotaResetTimeRequest": {
+            "type": "object",
+            "required": [
+                "nextResetAt"
+            ],
+            "properties": {
+                "nextResetAt": {
                     "type": "string"
                 }
             }
@@ -26931,6 +27153,61 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/UserSettingsResponse"
+                },
+                "errorMsg": {
+                    "type": "string"
+                }
+            }
+        },
+        "WeeklyQuotaCycleDataResponse": {
+            "type": "object",
+            "required": [
+                "cycle"
+            ],
+            "properties": {
+                "cycle": {
+                    "$ref": "#/definitions/WeeklyQuotaCycleResponse"
+                }
+            }
+        },
+        "WeeklyQuotaCycleResponse": {
+            "type": "object",
+            "required": [
+                "endAt",
+                "id",
+                "resetByUserID",
+                "resetReason",
+                "startAt"
+            ],
+            "properties": {
+                "endAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "resetByUserID": {
+                    "type": "integer",
+                    "x-nullable": true,
+                    "x-omitempty": false
+                },
+                "resetReason": {
+                    "type": "string"
+                },
+                "startAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "WeeklyQuotaCycleResponseDoc": {
+            "type": "object",
+            "required": [
+                "data",
+                "errorMsg"
+            ],
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/WeeklyQuotaCycleDataResponse"
                 },
                 "errorMsg": {
                     "type": "string"

@@ -959,6 +959,7 @@ definitions:
         - self
         - period
         - usage
+        - weekly
         type: string
       nativeToolBillingEnabled:
         type: boolean
@@ -1000,6 +1001,10 @@ definitions:
         type: number
       usdToCNYRate:
         type: number
+      weeklyNextResetAt:
+        type: string
+        x-nullable: true
+        x-omitempty: false
     required:
     - displayCurrency
     - epayTypes
@@ -1010,6 +1015,7 @@ definitions:
     - prepaidAmountNanousd
     - prepaidAmountUSD
     - usdToCNYRate
+    - weeklyNextResetAt
     type: object
   BillingConfigResponseDoc:
     properties:
@@ -1080,6 +1086,32 @@ definitions:
         items:
           $ref: '#/definitions/SubscriptionEntitlementResponse'
         type: array
+      weeklyCreditNanousd:
+        type: integer
+      weeklyCreditUSD:
+        type: number
+      weeklyEndAt:
+        type: string
+        x-nullable: true
+        x-omitempty: false
+      weeklyExhausted:
+        type: boolean
+      weeklyNextResetAt:
+        type: string
+        x-nullable: true
+        x-omitempty: false
+      weeklyRemainingNanousd:
+        type: integer
+      weeklyRemainingUSD:
+        type: number
+      weeklyStartAt:
+        type: string
+        x-nullable: true
+        x-omitempty: false
+      weeklyUsedNanousd:
+        type: integer
+      weeklyUsedUSD:
+        type: number
     required:
     - account
     - mode
@@ -1093,6 +1125,16 @@ definitions:
     - periodUsedUSD
     - plan
     - subscriptionEntitlements
+    - weeklyCreditNanousd
+    - weeklyCreditUSD
+    - weeklyEndAt
+    - weeklyExhausted
+    - weeklyNextResetAt
+    - weeklyRemainingNanousd
+    - weeklyRemainingUSD
+    - weeklyStartAt
+    - weeklyUsedNanousd
+    - weeklyUsedUSD
     type: object
   BillingOverviewResponseDoc:
     properties:
@@ -1141,6 +1183,10 @@ definitions:
         type: array
       sortOrder:
         type: integer
+      weeklyCreditNanousd:
+        type: integer
+      weeklyCreditUSD:
+        type: number
     required:
     - code
     - description
@@ -1154,6 +1200,8 @@ definitions:
     - permissionGroupID
     - prices
     - sortOrder
+    - weeklyCreditNanousd
+    - weeklyCreditUSD
     type: object
   BillingPlanResponseDoc:
     properties:
@@ -2769,10 +2817,20 @@ definitions:
       description:
         maxLength: 255
         type: string
+      durationCount:
+        enum:
+        - 1
+        - 3
+        - 12
+        type: integer
       durationDays:
         maximum: 3660
         minimum: 0
         type: integer
+      durationUnit:
+        enum:
+        - month
+        type: string
       expiresAt:
         type: string
         x-nullable: true
@@ -2783,6 +2841,7 @@ definitions:
         enum:
         - usage
         - period
+        - weekly
         type: string
       perUserLimit:
         maximum: 100
@@ -6359,8 +6418,12 @@ definitions:
         type: number
       description:
         type: string
+      durationCount:
+        type: integer
       durationDays:
         type: integer
+      durationUnit:
+        type: string
       expiresAt:
         type: string
         x-nullable: true
@@ -6396,7 +6459,9 @@ definitions:
     - creditNanousd
     - creditUSD
     - description
+    - durationCount
     - durationDays
+    - durationUnit
     - expiresAt
     - id
     - maxRedemptions
@@ -7592,6 +7657,9 @@ definitions:
       permissionGroupID:
         type: integer
         x-nullable: true
+      weeklyCreditUSD:
+        minimum: 0
+        type: number
     required:
     - amountUSD
     - billingInterval
@@ -7956,6 +8024,13 @@ definitions:
     required:
     - data
     - errorMsg
+    type: object
+  UpdateWeeklyQuotaResetTimeRequest:
+    properties:
+      nextResetAt:
+        type: string
+    required:
+    - nextResetAt
     type: object
   UploadFileResponseDoc:
     properties:
@@ -9261,6 +9336,44 @@ definitions:
     - data
     - errorMsg
     type: object
+  WeeklyQuotaCycleDataResponse:
+    properties:
+      cycle:
+        $ref: '#/definitions/WeeklyQuotaCycleResponse'
+    required:
+    - cycle
+    type: object
+  WeeklyQuotaCycleResponse:
+    properties:
+      endAt:
+        type: string
+      id:
+        type: integer
+      resetByUserID:
+        type: integer
+        x-nullable: true
+        x-omitempty: false
+      resetReason:
+        type: string
+      startAt:
+        type: string
+    required:
+    - endAt
+    - id
+    - resetByUserID
+    - resetReason
+    - startAt
+    type: object
+  WeeklyQuotaCycleResponseDoc:
+    properties:
+      data:
+        $ref: '#/definitions/WeeklyQuotaCycleDataResponse'
+      errorMsg:
+        type: string
+    required:
+    - data
+    - errorMsg
+    type: object
   WriteKnowledgeBaseRequest:
     properties:
       description:
@@ -9928,7 +10041,7 @@ paths:
       - application/json
       description: 分页查询计费兑换码配置
       parameters:
-      - description: 计费模式：usage/period
+      - description: 计费模式：usage/period/weekly
         in: query
         name: mode
         type: string
@@ -10131,6 +10244,83 @@ paths:
       security:
       - BearerAuth: []
       summary: 管理员批量删除兑换码
+      tags:
+      - admin-billing
+  /admin/billing/weekly-quota/reset:
+    post:
+      consumes:
+      - application/json
+      description: 立即开始新的统一周额度周期，周期结束时间为当前 UTC 时间加七天
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/WeeklyQuotaCycleResponseDoc'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/BillingErrorDoc'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/BillingErrorDoc'
+      security:
+      - BearerAuth: []
+      summary: 立即重置统一周额度
+      tags:
+      - admin-billing
+  /admin/billing/weekly-quota/reset-time:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前统一周额度周期及其 UTC 重置时间
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/WeeklyQuotaCycleResponseDoc'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/BillingErrorDoc'
+      security:
+      - BearerAuth: []
+      summary: 获取统一周额度重置时间
+      tags:
+      - admin-billing
+    patch:
+      consumes:
+      - application/json
+      description: 设置当前统一周额度周期的 UTC 重置时间，不清除已有用量
+      parameters:
+      - description: UTC 重置时间
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateWeeklyQuotaResetTimeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/WeeklyQuotaCycleResponseDoc'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/BillingErrorDoc'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/BillingErrorDoc'
+      security:
+      - BearerAuth: []
+      summary: 设置统一周额度重置时间
       tags:
       - admin-billing
   /admin/call-logs:
