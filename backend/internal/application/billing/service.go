@@ -51,7 +51,8 @@ type UserBillingAccountSnapshot struct {
 
 // Service 封装计费业务能力。
 type Service struct {
-	repo repository.BillingRepository
+	repo        repository.BillingRepository
+	weeklyQuota repository.WeeklyQuotaRepository
 
 	publicPricingMu               sync.RWMutex
 	publicPricingByModel          map[string]PublicModelPricing
@@ -350,6 +351,9 @@ type BillingAccountBalanceInput struct {
 // NewService 创建服务。
 func NewService(repo repository.BillingRepository) *Service {
 	service := &Service{repo: repo}
+	if weeklyQuota, ok := repo.(repository.WeeklyQuotaRepository); ok {
+		service.weeklyQuota = weeklyQuota
+	}
 	if counter, ok := repo.(permissionGroupPlanCounter); ok {
 		service.permissionGroupPlanCounter = counter
 	}
@@ -698,7 +702,7 @@ func (s *Service) SetUserSubscriptionByPlanCode(
 	if err != nil {
 		return nil, err
 	}
-	if mode != "period" {
+	if mode != "period" && mode != "weekly" {
 		return nil, ErrPaymentRequired
 	}
 
@@ -770,7 +774,7 @@ func (s *Service) CreatePaymentOrder(ctx context.Context, input PaymentOrderInpu
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if mode != "period" {
+	if mode != "period" && mode != "weekly" {
 		return nil, nil, nil, ErrPaymentRequired
 	}
 
@@ -2698,6 +2702,9 @@ func (s *Service) GetBillingOverview(ctx context.Context, userID uint, now time.
 	}
 
 	overview := &BillingOverview{Mode: mode}
+	if mode == "weekly" {
+		return s.getWeeklyBillingOverview(ctx, userID, now, overview)
+	}
 	if mode == "usage" {
 		account, accountErr := s.repo.GetOrCreateBillingAccount(ctx, userID)
 		if accountErr != nil {
@@ -2767,6 +2774,77 @@ func (s *Service) GetBillingOverview(ctx context.Context, userID uint, now time.
 	overview.PeriodRemainingNanousd = remainingNanousd
 	overview.SubscriptionEntitlements = buildSubscriptionEntitlementViews(subscriptions, planMap, now)
 	return overview, nil
+}
+
+func (s *Service) getWeeklyBillingOverview(ctx context.Context, userID uint, now time.Time, overview *BillingOverview) (*BillingOverview, error) {
+	overview.WeeklyExhausted = true
+	if s.weeklyQuota == nil {
+		return overview, nil
+	}
+	now = now.UTC()
+	cycle, err := s.weeklyQuota.EnsureWeeklyQuotaCycle(ctx, now, time.Time{})
+	if err != nil {
+		return nil, err
+	}
+	overview.WeeklyStartAt = &cycle.StartAt
+	overview.WeeklyEndAt = &cycle.EndAt
+	overview.WeeklyNextResetAt = &cycle.EndAt
+	account, err := s.weeklyQuota.GetOrCreateWeeklyQuotaAccount(ctx, cycle.ID, userID)
+	if err != nil {
+		return nil, err
+	}
+	overview.WeeklyUsedNanousd = account.UsedNanousd
+	subscriptions, planMap, err := s.listSubscriptionEntitlements(ctx, []uint{userID}, now)
+	if err != nil {
+		return nil, err
+	}
+	if current, ok := selectCurrentSubscription(subscriptions, planMap, now); ok {
+		if plan, exists := planMap[current.PlanID]; exists {
+			view := billingPlanViewFromDomain(plan)
+			overview.Plan = &view
+			overview.WeeklyCreditNanousd = plan.WeeklyCreditNanousd
+		}
+	}
+	overview.WeeklyRemainingNanousd = overview.WeeklyCreditNanousd - overview.WeeklyUsedNanousd
+	if overview.WeeklyRemainingNanousd < 0 {
+		overview.WeeklyRemainingNanousd = 0
+	}
+	overview.WeeklyExhausted = overview.WeeklyCreditNanousd <= 0 || overview.WeeklyRemainingNanousd == 0
+	overview.SubscriptionEntitlements = buildSubscriptionEntitlementViews(subscriptions, planMap, now)
+	return overview, nil
+}
+
+func billingPlanViewFromDomain(plan domainbilling.Plan) BillingPlanView {
+	return BillingPlanView{
+		ID: plan.ID, Code: plan.Code, Name: plan.Name, Description: plan.Description,
+		FeatureJSON: plan.FeatureJSON, PeriodCreditNanousd: plan.PeriodCreditNanousd,
+		WeeklyCreditNanousd: plan.WeeklyCreditNanousd, DiscountPercent: plan.DiscountPercent,
+		SortOrder: plan.SortOrder, IsActive: plan.IsActive, PermissionGroupID: plan.PermissionGroupID,
+	}
+}
+
+// GetWeeklyQuotaCycle returns the current shared UTC cycle.
+func (s *Service) GetWeeklyQuotaCycle(ctx context.Context, now time.Time) (*domainbilling.WeeklyQuotaCycle, error) {
+	if s.weeklyQuota == nil {
+		return nil, repository.ErrInvalidInput
+	}
+	return s.weeklyQuota.EnsureWeeklyQuotaCycle(ctx, now.UTC(), time.Time{})
+}
+
+// SetWeeklyQuotaNextReset updates the shared UTC boundary without changing usage.
+func (s *Service) SetWeeklyQuotaNextReset(ctx context.Context, now time.Time, nextResetAt time.Time) (*domainbilling.WeeklyQuotaCycle, error) {
+	if s.weeklyQuota == nil {
+		return nil, repository.ErrInvalidInput
+	}
+	return s.weeklyQuota.SetWeeklyQuotaNextReset(ctx, now.UTC(), nextResetAt.UTC())
+}
+
+// ResetWeeklyQuotaNow starts a new seven-day shared UTC cycle.
+func (s *Service) ResetWeeklyQuotaNow(ctx context.Context, now time.Time, actorUserID uint) (*domainbilling.WeeklyQuotaCycle, error) {
+	if s.weeklyQuota == nil {
+		return nil, repository.ErrInvalidInput
+	}
+	return s.weeklyQuota.ResetWeeklyQuotaCycle(ctx, now.UTC(), actorUserID)
 }
 
 // GetBillingAccount 查询或创建当前用户按量余额账户。

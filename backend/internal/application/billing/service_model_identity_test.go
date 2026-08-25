@@ -240,10 +240,34 @@ type billingRepositoryStub struct {
 	periodCreditNanousd        int64
 	updatedPlan                *domainbilling.Plan
 	updatedPrice               *domainbilling.Price
+	weeklyCycle                *domainbilling.WeeklyQuotaCycle
+	weeklyAccount              *domainbilling.WeeklyQuotaAccount
 }
 
 func (r *billingRepositoryStub) GetBillingMode(context.Context) (string, error) {
 	return r.mode, nil
+}
+
+func (r *billingRepositoryStub) EnsureWeeklyQuotaCycle(context.Context, time.Time, time.Time) (*domainbilling.WeeklyQuotaCycle, error) {
+	if r.weeklyCycle == nil {
+		r.weeklyCycle = &domainbilling.WeeklyQuotaCycle{ID: 1, StartAt: time.Unix(0, 0).UTC(), EndAt: time.Unix(7*24*60*60, 0).UTC()}
+	}
+	return r.weeklyCycle, nil
+}
+
+func (r *billingRepositoryStub) SetWeeklyQuotaNextReset(context.Context, time.Time, time.Time) (*domainbilling.WeeklyQuotaCycle, error) {
+	return r.weeklyCycle, nil
+}
+
+func (r *billingRepositoryStub) ResetWeeklyQuotaCycle(context.Context, time.Time, uint) (*domainbilling.WeeklyQuotaCycle, error) {
+	return r.weeklyCycle, nil
+}
+
+func (r *billingRepositoryStub) GetOrCreateWeeklyQuotaAccount(context.Context, uint, uint) (*domainbilling.WeeklyQuotaAccount, error) {
+	if r.weeklyAccount == nil {
+		r.weeklyAccount = &domainbilling.WeeklyQuotaAccount{}
+	}
+	return r.weeklyAccount, nil
 }
 
 func (r *billingRepositoryStub) GetBillingPrepaidAmountNanousd(context.Context) (int64, error) {
@@ -448,6 +472,20 @@ func (r *billingRepositoryStub) ListDailyUsageByUser(context.Context, uint, time
 }
 func (r *billingRepositoryStub) SumBillableNanousd(context.Context, uint, time.Time, time.Time) (int64, error) {
 	return 0, nil
+}
+
+func TestGetBillingOverviewWeeklyReturnsZeroExhaustedWithoutSubscription(t *testing.T) {
+	repo := &billingRepositoryStub{mode: "weekly", weeklyAccount: &domainbilling.WeeklyQuotaAccount{UsedNanousd: 25}}
+	overview, err := NewService(repo).GetBillingOverview(context.Background(), 1, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("GetBillingOverview() error = %v", err)
+	}
+	if overview.Account != nil || overview.Plan != nil {
+		t.Fatalf("weekly overview exposed non-subscription account/plan: %+v", overview)
+	}
+	if overview.WeeklyCreditNanousd != 0 || overview.WeeklyUsedNanousd != 25 || !overview.WeeklyExhausted {
+		t.Fatalf("weekly zero overview = %+v", overview)
+	}
 }
 
 func TestAuthorizeUsageWeeklyRequiresPaidSubscriptionAndSnapshotsLimit(t *testing.T) {

@@ -131,6 +131,12 @@ func (h *Handler) loadBillingConfig(ctx context.Context) (BillingConfigResponse,
 	if err != nil {
 		return BillingConfigResponse{}, err
 	}
+	var weeklyNextResetAt *time.Time
+	if mode == "weekly" {
+		if cycle, weeklyErr := h.service.GetWeeklyQuotaCycle(ctx, time.Now().UTC()); weeklyErr == nil {
+			weeklyNextResetAt = &cycle.EndAt
+		}
+	}
 	return BillingConfigResponse{
 		Mode:                     mode,
 		PrepaidAmountUSD:         prepaidAmountUSD,
@@ -141,6 +147,7 @@ func (h *Handler) loadBillingConfig(ctx context.Context) (BillingConfigResponse,
 		USDToCNYRate:             usdToCNYRate,
 		DisplayCurrency:          displayCurrency,
 		EPayTypes:                epayTypes,
+		WeeklyNextResetAt:        weeklyNextResetAt,
 	}, nil
 }
 
@@ -238,6 +245,75 @@ func (h *Handler) PatchBillingConfig(c *gin.Context) {
 		return
 	}
 	response.Success(c, BillingConfigDataResponse{Config: config})
+}
+
+// GetWeeklyQuotaResetTime godoc
+// @Summary 获取统一周额度重置时间
+// @Description 获取当前统一周额度周期及其 UTC 重置时间
+// @Tags admin-billing
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} WeeklyQuotaCycleDataResponse
+// @Failure 500 {object} ErrorDoc
+// @Router /admin/billing/weekly-quota/reset-time [get]
+func (h *Handler) GetWeeklyQuotaResetTime(c *gin.Context) {
+	cycle, err := h.service.GetWeeklyQuotaCycle(c.Request.Context(), time.Now().UTC())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "get weekly quota reset time failed")
+		return
+	}
+	response.Success(c, WeeklyQuotaCycleDataResponse{Cycle: toWeeklyQuotaCycleResponse(cycle)})
+}
+
+// SetWeeklyQuotaResetTime godoc
+// @Summary 设置统一周额度重置时间
+// @Description 设置当前统一周额度周期的 UTC 重置时间，不清除已有用量
+// @Tags admin-billing
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body SetWeeklyQuotaResetTimeRequest true "UTC 重置时间"
+// @Success 200 {object} WeeklyQuotaCycleDataResponse
+// @Failure 400 {object} ErrorDoc
+// @Failure 500 {object} ErrorDoc
+// @Router /admin/billing/weekly-quota/reset-time [patch]
+func (h *Handler) SetWeeklyQuotaResetTime(c *gin.Context) {
+	var req SetWeeklyQuotaResetTimeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.InvalidRequestBody(c, err)
+		return
+	}
+	cycle, err := h.service.SetWeeklyQuotaNextReset(c.Request.Context(), time.Now().UTC(), req.NextResetAt)
+	if err != nil {
+		response.ErrorFrom(c, http.StatusBadRequest, err)
+		return
+	}
+	actor := middleware.MustUserID(c)
+	h.recordAudit(c, actor, "set_weekly_quota_reset_time", "billing_weekly_quota", strconv.FormatUint(uint64(cycle.ID), 10), map[string]interface{}{"next_reset_at": cycle.EndAt})
+	response.Success(c, WeeklyQuotaCycleDataResponse{Cycle: toWeeklyQuotaCycleResponse(cycle)})
+}
+
+// ResetWeeklyQuotaNow godoc
+// @Summary 立即重置统一周额度
+// @Description 立即开始新的统一周额度周期，周期结束时间为当前 UTC 时间加七天
+// @Tags admin-billing
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} WeeklyQuotaCycleDataResponse
+// @Failure 400 {object} ErrorDoc
+// @Failure 500 {object} ErrorDoc
+// @Router /admin/billing/weekly-quota/reset [post]
+func (h *Handler) ResetWeeklyQuotaNow(c *gin.Context) {
+	actor := middleware.MustUserID(c)
+	cycle, err := h.service.ResetWeeklyQuotaNow(c.Request.Context(), time.Now().UTC(), actor)
+	if err != nil {
+		response.ErrorFrom(c, http.StatusBadRequest, err)
+		return
+	}
+	h.recordAudit(c, actor, "reset_weekly_quota_now", "billing_weekly_quota", strconv.FormatUint(uint64(cycle.ID), 10), map[string]interface{}{"next_reset_at": cycle.EndAt})
+	response.Success(c, WeeklyQuotaCycleDataResponse{Cycle: toWeeklyQuotaCycleResponse(cycle)})
 }
 
 // ListPlans godoc
@@ -386,6 +462,8 @@ func (h *Handler) CreateRedemptionCodes(c *gin.Context) {
 		Mode:           req.Mode,
 		CreditUSD:      req.CreditUSD,
 		PlanID:         req.PlanID,
+		DurationUnit:   req.DurationUnit,
+		DurationCount:  req.DurationCount,
 		DurationDays:   req.DurationDays,
 		MaxRedemptions: req.MaxRedemptions,
 		PerUserLimit:   req.PerUserLimit,

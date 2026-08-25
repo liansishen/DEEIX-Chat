@@ -42,6 +42,13 @@ type BillingOverview struct {
 	PeriodCreditNanousd      int64
 	PeriodUsedNanousd        int64
 	PeriodRemainingNanousd   int64
+	WeeklyStartAt            *time.Time
+	WeeklyEndAt              *time.Time
+	WeeklyNextResetAt        *time.Time
+	WeeklyCreditNanousd      int64
+	WeeklyUsedNanousd        int64
+	WeeklyRemainingNanousd   int64
+	WeeklyExhausted          bool
 	Account                  *BillingAccountView
 	SubscriptionEntitlements []SubscriptionEntitlementView
 }

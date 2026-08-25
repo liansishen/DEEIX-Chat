@@ -48,7 +48,7 @@ type UpsertModelPricingRequest struct {
 
 // BillingConfigRequest 保存计费全局配置。
 type BillingConfigRequest struct {
-	Mode                     string                     `json:"mode" binding:"required,oneof=self period usage"`
+	Mode                     string                     `json:"mode" binding:"required,oneof=self period usage weekly"`
 	PrepaidAmountUSD         *float64                   `json:"prepaidAmountUSD,omitempty" binding:"omitempty,min=0"`
 	USDToCNYRate             *float64                   `json:"usdToCNYRate,omitempty" binding:"omitempty,gt=0"`
 	DisplayCurrency          *string                    `json:"displayCurrency,omitempty" binding:"omitempty,oneof=USD CNY"`
@@ -62,13 +62,34 @@ type UpdateBillingAccountBalanceRequest struct {
 	Description string   `json:"description,omitempty" binding:"omitempty,max=255"`
 }
 
+// SetWeeklyQuotaNextResetRequest updates the shared UTC reset boundary.
+type SetWeeklyQuotaResetTimeRequest struct {
+	NextResetAt time.Time `json:"nextResetAt" binding:"required"`
+}
+
+// WeeklyQuotaCycleResponse describes the shared weekly quota cycle.
+type WeeklyQuotaCycleResponse struct {
+	ID            uint      `json:"id"`
+	StartAt       time.Time `json:"startAt"`
+	EndAt         time.Time `json:"endAt"`
+	ResetReason   string    `json:"resetReason"`
+	ResetByUserID *uint     `json:"resetByUserID" extensions:"x-nullable,!x-omitempty"`
+}
+
+// WeeklyQuotaCycleDataResponse wraps a weekly quota cycle operation response.
+type WeeklyQuotaCycleDataResponse struct {
+	Cycle WeeklyQuotaCycleResponse `json:"cycle"`
+}
+
 // CreateRedemptionCodeRequest 创建兑换码请求。
 type CreateRedemptionCodeRequest struct {
 	Code           string     `json:"code,omitempty" binding:"omitempty,min=3,max=64"`
 	Quantity       int        `json:"quantity,omitempty" binding:"omitempty,min=1,max=100"`
-	Mode           string     `json:"mode" binding:"required,oneof=usage period"`
+	Mode           string     `json:"mode" binding:"required,oneof=usage period weekly"`
 	CreditUSD      float64    `json:"creditUSD,omitempty" binding:"omitempty,min=0"`
 	PlanID         uint       `json:"planID,omitempty" binding:"omitempty,min=1"`
+	DurationUnit   string     `json:"durationUnit,omitempty" binding:"omitempty,oneof=month"`
+	DurationCount  int        `json:"durationCount,omitempty" binding:"omitempty,oneof=1 3 12"`
 	DurationDays   int        `json:"durationDays,omitempty" binding:"omitempty,min=0,max=3660"`
 	MaxRedemptions *int       `json:"maxRedemptions,omitempty" binding:"omitempty,min=1"`
 	PerUserLimit   int        `json:"perUserLimit,omitempty" binding:"omitempty,min=1,max=100"`
@@ -109,6 +130,7 @@ type UpdateBillingPlanRequest struct {
 	Name              string   `json:"name" binding:"required,min=1,max=64"`
 	Description       *string  `json:"description" binding:"required,max=255"`
 	PeriodCreditUSD   *float64 `json:"periodCreditUSD" binding:"required,gte=0"`
+	WeeklyCreditUSD   *float64 `json:"weeklyCreditUSD,omitempty" binding:"omitempty,gte=0"`
 	DiscountPercent   *int     `json:"discountPercent" binding:"required,gte=0,lte=100"`
 	Currency          string   `json:"currency,omitempty" binding:"omitempty,max=16"`
 	AmountUSD         *float64 `json:"amountUSD" binding:"required,gte=0"`
@@ -180,6 +202,8 @@ type BillingPlanResponse struct {
 	FeatureJSON         string                 `json:"featureJSON"`
 	PeriodCreditUSD     float64                `json:"periodCreditUSD"`
 	PeriodCreditNanousd int64                  `json:"periodCreditNanousd"`
+	WeeklyCreditUSD     float64                `json:"weeklyCreditUSD"`
+	WeeklyCreditNanousd int64                  `json:"weeklyCreditNanousd"`
 	DiscountPercent     int                    `json:"discountPercent"`
 	SortOrder           int                    `json:"sortOrder"`
 	IsActive            bool                   `json:"isActive"`
@@ -359,6 +383,16 @@ type BillingOverviewResponse struct {
 	PeriodUsedNanousd        int64                             `json:"periodUsedNanousd"`
 	PeriodRemainingUSD       float64                           `json:"periodRemainingUSD"`
 	PeriodRemainingNanousd   int64                             `json:"periodRemainingNanousd"`
+	WeeklyStartAt            *time.Time                        `json:"weeklyStartAt" extensions:"x-nullable,!x-omitempty"`
+	WeeklyEndAt              *time.Time                        `json:"weeklyEndAt" extensions:"x-nullable,!x-omitempty"`
+	WeeklyNextResetAt        *time.Time                        `json:"weeklyNextResetAt" extensions:"x-nullable,!x-omitempty"`
+	WeeklyCreditUSD          float64                           `json:"weeklyCreditUSD"`
+	WeeklyCreditNanousd      int64                             `json:"weeklyCreditNanousd"`
+	WeeklyUsedUSD            float64                           `json:"weeklyUsedUSD"`
+	WeeklyUsedNanousd        int64                             `json:"weeklyUsedNanousd"`
+	WeeklyRemainingUSD       float64                           `json:"weeklyRemainingUSD"`
+	WeeklyRemainingNanousd   int64                             `json:"weeklyRemainingNanousd"`
+	WeeklyExhausted          bool                              `json:"weeklyExhausted"`
 	Account                  *BillingAccountResponse           `json:"account" extensions:"x-nullable,!x-omitempty"`
 	SubscriptionEntitlements []SubscriptionEntitlementResponse `json:"subscriptionEntitlements"`
 }
@@ -378,6 +412,8 @@ type RedemptionCodeResponse struct {
 	CreditUSD            float64    `json:"creditUSD"`
 	CreditNanousd        int64      `json:"creditNanousd"`
 	PlanID               uint       `json:"planID"`
+	DurationUnit         string     `json:"durationUnit"`
+	DurationCount        int        `json:"durationCount"`
 	DurationDays         int        `json:"durationDays"`
 	MaxRedemptions       *int       `json:"maxRedemptions" extensions:"x-nullable,!x-omitempty"`
 	PerUserLimit         int        `json:"perUserLimit"`
@@ -525,6 +561,7 @@ type BillingConfigResponse struct {
 	USDToCNYRate             float64                     `json:"usdToCNYRate"`
 	DisplayCurrency          string                      `json:"displayCurrency"`
 	EPayTypes                []PaymentTypeResponse       `json:"epayTypes"`
+	WeeklyNextResetAt        *time.Time                  `json:"weeklyNextResetAt" extensions:"x-nullable,!x-omitempty"`
 }
 
 // NativeToolPricingResponse 原生工具默认价格响应。
@@ -715,6 +752,8 @@ func toPlanListResponse(views []appbilling.BillingPlanView) []BillingPlanRespons
 			FeatureJSON:         v.FeatureJSON,
 			PeriodCreditUSD:     nanousdToUSD(v.PeriodCreditNanousd),
 			PeriodCreditNanousd: v.PeriodCreditNanousd,
+			WeeklyCreditUSD:     nanousdToUSD(v.WeeklyCreditNanousd),
+			WeeklyCreditNanousd: v.WeeklyCreditNanousd,
 			DiscountPercent:     v.DiscountPercent,
 			SortOrder:           v.SortOrder,
 			IsActive:            v.IsActive,
@@ -846,6 +885,21 @@ func toBillingAccountViewResponse(item *appbilling.BillingAccountView) *BillingA
 	}
 }
 
+func toWeeklyQuotaCycleResponse(item *domainbilling.WeeklyQuotaCycle) WeeklyQuotaCycleResponse {
+	if item == nil {
+		return WeeklyQuotaCycleResponse{}
+	}
+	var resetByUserID *uint
+	if item.ResetByUserID != 0 {
+		value := item.ResetByUserID
+		resetByUserID = &value
+	}
+	return WeeklyQuotaCycleResponse{
+		ID: item.ID, StartAt: item.StartAt, EndAt: item.EndAt,
+		ResetReason: item.ResetReason, ResetByUserID: resetByUserID,
+	}
+}
+
 func toBillingOverviewResponse(item *appbilling.BillingOverview) BillingOverviewResponse {
 	if item == nil {
 		return BillingOverviewResponse{}
@@ -866,6 +920,16 @@ func toBillingOverviewResponse(item *appbilling.BillingOverview) BillingOverview
 		PeriodUsedNanousd:        item.PeriodUsedNanousd,
 		PeriodRemainingUSD:       nanousdToUSD(item.PeriodRemainingNanousd),
 		PeriodRemainingNanousd:   item.PeriodRemainingNanousd,
+		WeeklyStartAt:            item.WeeklyStartAt,
+		WeeklyEndAt:              item.WeeklyEndAt,
+		WeeklyNextResetAt:        item.WeeklyNextResetAt,
+		WeeklyCreditUSD:          nanousdToUSD(item.WeeklyCreditNanousd),
+		WeeklyCreditNanousd:      item.WeeklyCreditNanousd,
+		WeeklyUsedUSD:            nanousdToUSD(item.WeeklyUsedNanousd),
+		WeeklyUsedNanousd:        item.WeeklyUsedNanousd,
+		WeeklyRemainingUSD:       nanousdToUSD(item.WeeklyRemainingNanousd),
+		WeeklyRemainingNanousd:   item.WeeklyRemainingNanousd,
+		WeeklyExhausted:          item.WeeklyExhausted,
 		Account:                  toBillingAccountViewResponse(item.Account),
 		SubscriptionEntitlements: toSubscriptionEntitlementResponses(item.SubscriptionEntitlements),
 	}
@@ -889,6 +953,8 @@ func toRedemptionCodeResponse(item appbilling.RedemptionCodeView) RedemptionCode
 		CreditUSD:            nanousdToUSD(item.CreditNanousd),
 		CreditNanousd:        item.CreditNanousd,
 		PlanID:               item.PlanID,
+		DurationUnit:         item.DurationUnit,
+		DurationCount:        item.DurationCount,
 		DurationDays:         item.DurationDays,
 		MaxRedemptions:       item.MaxRedemptions,
 		PerUserLimit:         item.PerUserLimit,
@@ -1167,12 +1233,21 @@ func planUpdateInputFromRequest(req UpdateBillingPlanRequest) appbilling.PlanUpd
 		Name:                req.Name,
 		Description:         *req.Description,
 		PeriodCreditNanousd: usdToNanousd(*req.PeriodCreditUSD),
+		WeeklyCreditNanousd: weeklyCreditNanousdFromRequest(req.WeeklyCreditUSD),
 		DiscountPercent:     *req.DiscountPercent,
 		Currency:            req.Currency,
 		AmountCents:         usdToCents(*req.AmountUSD),
 		BillingInterval:     req.BillingInterval,
 		PermissionGroupID:   req.PermissionGroupID,
 	}
+}
+
+func weeklyCreditNanousdFromRequest(value *float64) *int64 {
+	if value == nil {
+		return nil
+	}
+	converted := usdToNanousd(*value)
+	return &converted
 }
 
 func usdToNanousd(value float64) int64 {

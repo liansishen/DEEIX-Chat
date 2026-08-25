@@ -27,6 +27,9 @@ func (m *Module) RegisterRoutes(authRequired *gin.RouterGroup) {
 func (m *Module) RegisterAdminRoutes(adminGroup *gin.RouterGroup) {
 	adminGroup.GET("/billing/config", m.Handler.GetBillingConfig)
 	adminGroup.PATCH("/billing/config", m.Handler.PatchBillingConfig)
+	adminGroup.GET("/billing/weekly-quota/reset-time", m.Handler.GetWeeklyQuotaResetTime)
+	adminGroup.PATCH("/billing/weekly-quota/reset-time", m.Handler.SetWeeklyQuotaResetTime)
+	adminGroup.POST("/billing/weekly-quota/reset", m.Handler.ResetWeeklyQuotaNow)
 	adminGroup.GET("/billing/plans", m.Handler.ListPlans)
 	adminGroup.PATCH("/billing/plans/:id", m.Handler.UpdatePlan)
 	adminGroup.PATCH("/billing/accounts/:user_id/balance", m.Handler.UpdateBillingAccountBalance)

@@ -1,7 +1,10 @@
 package billing
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
+	"time"
 
 	appbilling "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/application/billing"
 	domainbilling "github.com/DEEIX-AI/DEEIX-Chat/backend/internal/domain/billing"
@@ -91,6 +94,64 @@ func TestRequiredBillingFieldsRejectMissingValues(t *testing.T) {
 				t.Fatal("expected missing required values to fail validation")
 			}
 		})
+	}
+}
+
+func TestWeeklyQuotaCycleResponseUsesEnvelopeAndNullableResetActor(t *testing.T) {
+	cycle := WeeklyQuotaCycleDataResponse{Cycle: toWeeklyQuotaCycleResponse(&domainbilling.WeeklyQuotaCycle{
+		ID: 7, StartAt: time.Unix(100, 0).UTC(), EndAt: time.Unix(200, 0).UTC(),
+		ResetReason: domainbilling.WeeklyQuotaResetReasonManual, ResetByUserID: 42,
+	})}
+	raw, err := json.Marshal(cycle)
+	if err != nil {
+		t.Fatalf("marshal weekly cycle response: %v", err)
+	}
+	want := `{"cycle":{"id":7,"startAt":"1970-01-01T00:01:40Z","endAt":"1970-01-01T00:03:20Z","resetReason":"manual","resetByUserID":42}}`
+	if string(raw) != want {
+		t.Fatalf("weekly cycle JSON = %s, want %s", raw, want)
+	}
+	zeroActor := toWeeklyQuotaCycleResponse(&domainbilling.WeeklyQuotaCycle{})
+	if zeroActor.ResetByUserID != nil {
+		t.Fatal("zero reset actor should be nullable")
+	}
+}
+
+func TestWeeklyBillingOverviewResponseUsesFinalFieldNames(t *testing.T) {
+	start := time.Unix(100, 0).UTC()
+	end := time.Unix(200, 0).UTC()
+	raw, err := json.Marshal(toBillingOverviewResponse(&appbilling.BillingOverview{
+		WeeklyStartAt: startPtr(start), WeeklyEndAt: startPtr(end), WeeklyNextResetAt: startPtr(end),
+		WeeklyCreditNanousd: 100, WeeklyUsedNanousd: 25, WeeklyRemainingNanousd: 75,
+	}))
+	if err != nil {
+		t.Fatalf("marshal weekly overview response: %v", err)
+	}
+	for _, field := range []string{"weeklyStartAt", "weeklyEndAt", "weeklyNextResetAt", "weeklyCreditUSD", "weeklyCreditNanousd", "weeklyUsedUSD", "weeklyUsedNanousd", "weeklyRemainingUSD", "weeklyRemainingNanousd", "weeklyExhausted"} {
+		if !strings.Contains(string(raw), `"`+field+`"`) {
+			t.Fatalf("weekly overview JSON missing %s: %s", field, raw)
+		}
+	}
+}
+
+func startPtr(value time.Time) *time.Time { return &value }
+
+func TestWeeklyBillingDTOsExposeWeeklyFieldsAndPreserveOmittedPlanCredit(t *testing.T) {
+	zero := 0.0
+	planRequest := UpdateBillingPlanRequest{
+		Name: "Pro", Description: new(string), PeriodCreditUSD: &zero,
+		DiscountPercent: new(int), AmountUSD: &zero, BillingInterval: "month",
+	}
+	input := planUpdateInputFromRequest(planRequest)
+	if input.WeeklyCreditNanousd != nil {
+		t.Fatalf("omitted weekly credit = %v, want nil", input.WeeklyCreditNanousd)
+	}
+	if err := binding.Validator.ValidateStruct(BillingConfigRequest{Mode: "weekly"}); err != nil {
+		t.Fatalf("weekly billing mode validation error: %v", err)
+	}
+	if err := binding.Validator.ValidateStruct(CreateRedemptionCodeRequest{
+		Mode: "weekly", PlanID: 1, DurationUnit: domainbilling.RedemptionDurationUnitMonth, DurationCount: 3,
+	}); err != nil {
+		t.Fatalf("weekly redemption validation error: %v", err)
 	}
 }
 
