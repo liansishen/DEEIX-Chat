@@ -32,6 +32,7 @@
     },
     "weeklyResetTitle": "Weekly quota reset",
     "weeklyNextReset": "Next reset time",
+    "weeklyTimeZone": "Administrator timezone: {timezone}",
     "weeklyManualReset": "Reset now",
     "weeklyResetConfirm": "Save the weekly quota reset time?",
     "weeklyManualResetConfirm": "Reset all weekly quotas now?"
@@ -346,7 +347,7 @@
     "weeklyResetSaved": "Weekly quota reset time saved",
     "weeklyResetCompleted": "Weekly quotas reset",
     "weeklyResetFailed": "Failed to update weekly quota reset",
-    "weeklyResetFutureRequired": "Choose a future UTC reset time."
+    "weeklyResetFutureRequired": "Choose a future reset time in your timezone."
   },
   "importErrors": {
     "invalidJSON": "File content is not valid JSON",

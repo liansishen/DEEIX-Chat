@@ -30,6 +30,7 @@ import {
 } from "@/features/admin/model/billing-settings";
 import { CopyActionButton } from "@/shared/components/copy-action";
 import { CollapsibleMotionContent } from "@/shared/components/collapsible-motion-content";
+import { useAuthSession } from "@/shared/auth/auth-session-context";
 import {
   SettingsFieldItem,
   SettingsFieldList,
@@ -39,6 +40,7 @@ import {
 import { resolveApiBaseURL } from "@/shared/api/http-client";
 import { resolveAccessToken } from "@/shared/auth/resolve-access-token";
 import { configuredSettingsMap } from "@/shared/lib/settings-meta";
+import { detectCurrentTimeZone, formatDateTimeLocalInTimeZone, parseDateTimeLocalInTimeZone } from "@/shared/lib/time-zone";
 
 type BillingConfigSectionProps = {
   billingConfig: AdminBillingConfigDTO | null;
@@ -63,6 +65,7 @@ export function BillingConfigSection({
   setPaymentConfiguredMap,
   loading,
 }: BillingConfigSectionProps) {
+  const { user } = useAuthSession();
   const t = useTranslations("adminBilling");
   const tActions = useTranslations("common.actions");
   const tCommonErrors = useTranslations("common.errors");
@@ -78,25 +81,19 @@ export function BillingConfigSection({
   const stripeWebhookEndpoint = React.useMemo(() => `${resolveApiBaseURL()}/api/v1/billing/payments/stripe/webhook`, []);
 
   const billingMode = billingConfig?.mode ?? "self";
-  const formatUTCDateTimeInput = React.useCallback((value: string) => {
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 16);
-  }, []);
-  const parseUTCDateTimeInput = React.useCallback((value: string) => {
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
-    const parsed = new Date(`${value}:00Z`);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }, []);
+  const adminTimeZone = user?.timezone?.trim() || detectCurrentTimeZone();
+  const formatDateTimeInput = React.useCallback((value: string) => formatDateTimeLocalInTimeZone(value, adminTimeZone), [adminTimeZone]);
+  const parseDateTimeInput = React.useCallback((value: string) => parseDateTimeLocalInTimeZone(value, adminTimeZone), [adminTimeZone]);
 
   React.useEffect(() => {
     const next = billingConfig?.weeklyNextResetAt;
-    if (next) setWeeklyResetAt(formatUTCDateTimeInput(next));
+    if (next) setWeeklyResetAt(formatDateTimeInput(next));
     if (billingMode !== "weekly") return;
-    void resolveAccessToken().then((token) => token ? getAdminWeeklyQuotaCycle(token).then((data) => setWeeklyResetAt(formatUTCDateTimeInput(data.cycle.endAt))).catch(() => undefined) : undefined);
-  }, [billingConfig?.weeklyNextResetAt, billingMode, formatUTCDateTimeInput]);
+    void resolveAccessToken().then((token) => token ? getAdminWeeklyQuotaCycle(token).then((data) => setWeeklyResetAt(formatDateTimeInput(data.cycle.endAt))).catch(() => undefined) : undefined);
+  }, [billingConfig?.weeklyNextResetAt, billingMode, formatDateTimeInput]);
 
   async function saveWeeklyResetTime() {
-    const nextReset = parseUTCDateTimeInput(weeklyResetAt);
+    const nextReset = parseDateTimeInput(weeklyResetAt);
     if (!nextReset || nextReset.getTime() <= Date.now()) {
       toast.error(t("toast.weeklyResetFutureRequired"));
       return;
@@ -107,7 +104,7 @@ export function BillingConfigSection({
       const token = await resolveAccessToken();
       if (!token) return;
       const data = await updateAdminWeeklyQuotaResetTime(token, { nextResetAt: nextReset.toISOString() });
-      setWeeklyResetAt(formatUTCDateTimeInput(data.cycle.endAt));
+      setWeeklyResetAt(formatDateTimeInput(data.cycle.endAt));
       setBillingConfig((current) => current ? { ...current, weeklyNextResetAt: data.cycle.endAt } : current);
       toast.success(t("toast.weeklyResetSaved"));
     } catch (error) { toast.error(t("toast.weeklyResetFailed"), { description: resolveAdminErrorMessage(error) }); }
@@ -117,7 +114,7 @@ export function BillingConfigSection({
   async function manualWeeklyReset() {
     if (!window.confirm(t("billingConfig.weeklyManualResetConfirm"))) return;
     setWeeklyResetSaving(true);
-    try { const token = await resolveAccessToken(); if (!token) return; const data = await resetAdminWeeklyQuota(token); setWeeklyResetAt(formatUTCDateTimeInput(data.cycle.endAt)); setBillingConfig((current) => current ? { ...current, weeklyNextResetAt: data.cycle.endAt } : current); toast.success(t("toast.weeklyResetCompleted")); }
+    try { const token = await resolveAccessToken(); if (!token) return; const data = await resetAdminWeeklyQuota(token); setWeeklyResetAt(formatDateTimeInput(data.cycle.endAt)); setBillingConfig((current) => current ? { ...current, weeklyNextResetAt: data.cycle.endAt } : current); toast.success(t("toast.weeklyResetCompleted")); }
     catch (error) { toast.error(t("toast.weeklyResetFailed"), { description: resolveAdminErrorMessage(error) }); }
     finally { setWeeklyResetSaving(false); }
   }
@@ -395,7 +392,7 @@ export function BillingConfigSection({
 
       {billingMode === "weekly" ? (
         <section className="space-y-4 px-1">
-          <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">{t("billingConfig.weeklyResetTitle")}</h3><span className="text-xs text-muted-foreground">UTC</span></div>
+          <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">{t("billingConfig.weeklyResetTitle")}</h3><span className="text-xs text-muted-foreground">{t("billingConfig.weeklyTimeZone", { timezone: adminTimeZone })}</span></div>
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-56 space-y-1"><label className="text-xs text-muted-foreground" htmlFor="weekly-reset-at">{t("billingConfig.weeklyNextReset")}</label><Input id="weekly-reset-at" type="datetime-local" value={weeklyResetAt} disabled={weeklyResetSaving || loading} onChange={(event) => setWeeklyResetAt(event.target.value)} /></div>
             <Button type="button" size="sm" disabled={weeklyResetSaving || loading} onClick={() => void saveWeeklyResetTime()}>{tActions("save")}</Button>

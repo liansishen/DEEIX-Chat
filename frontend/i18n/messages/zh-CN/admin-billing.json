@@ -32,6 +32,7 @@
     },
     "weeklyResetTitle": "每周额度重置",
     "weeklyNextReset": "下次重置时间",
+    "weeklyTimeZone": "管理员时区：{timezone}",
     "weeklyManualReset": "立即重置",
     "weeklyResetConfirm": "保存每周额度重置时间？",
     "weeklyManualResetConfirm": "立即重置所有每周额度？"
