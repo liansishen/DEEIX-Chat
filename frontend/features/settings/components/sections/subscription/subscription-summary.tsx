@@ -18,6 +18,7 @@ import {
   formatPlanPrice,
   formatProviderPaymentAmountFromUSD,
   formatShortDate,
+  formatShortDateTime,
   isCurrentBillingPlan,
   planRank,
   resolveDefaultPrice,
@@ -342,7 +343,7 @@ export function SubscriptionSummary({
                 <p className="text-xs font-medium">{t(billingMode === "weekly" ? "weeklyUsage.title" : "periodUsage.title")}</p>
                 <p className="text-xs text-muted-foreground">
                   {billingMode === "weekly"
-                    ? (weeklyNextResetAt ? `${t("weeklyUsage.nextReset")}: ${formatShortDate(weeklyNextResetAt, locale)}` : t("weeklyUsage.currentCycle"))
+                    ? (weeklyNextResetAt ? `${t("weeklyUsage.nextReset")}: ${formatShortDateTime(weeklyNextResetAt, locale)}` : t("weeklyUsage.currentCycle"))
                     : billingOverview?.periodStartAt && billingOverview?.periodEndAt
                       ? `${formatShortDate(billingOverview.periodStartAt, locale)} - ${formatShortDate(billingOverview.periodEndAt, locale)}`
                       : t("periodUsage.currentPeriod")}

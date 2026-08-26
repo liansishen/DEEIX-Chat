@@ -194,6 +194,19 @@ export function formatShortDate(value: string | null | undefined, locale: string
   }).format(date);
 }
 
+export function formatShortDateTime(value: string | null | undefined, locale: string): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat(locale, {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
 export function formatMediumDate(value: string | null | undefined, locale: string): string {
   if (!value) return "-";
   const date = new Date(value);
