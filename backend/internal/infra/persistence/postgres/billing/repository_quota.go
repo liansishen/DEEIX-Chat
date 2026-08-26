@@ -53,10 +53,20 @@ func (r *Repo) SetWeeklyQuotaNextReset(ctx context.Context, now time.Time, nextR
 			return err
 		}
 		if cycle.EndAt.Equal(nextResetAt) {
+			if err := tx.Model(&models.BillingQuotaSchedule{}).
+				Where("id = ?", weeklyQuotaScheduleSingletonID).
+				Update("next_reset_at", nextResetAt).Error; err != nil {
+				return translateError(err)
+			}
 			result = toDomainWeeklyQuotaCycle(*cycle)
 			return nil
 		}
 		if err := tx.Model(cycle).Update("end_at", nextResetAt).Error; err != nil {
+			return translateError(err)
+		}
+		if err := tx.Model(&models.BillingQuotaSchedule{}).
+			Where("id = ?", weeklyQuotaScheduleSingletonID).
+			Update("next_reset_at", nextResetAt).Error; err != nil {
 			return translateError(err)
 		}
 		cycle.EndAt = nextResetAt
@@ -90,6 +100,11 @@ func (r *Repo) ResetWeeklyQuotaCycle(ctx context.Context, now time.Time, actorUs
 			if err := tx.Model(cycle).Updates(updates).Error; err != nil {
 				return translateError(err)
 			}
+			if err := tx.Model(&models.BillingQuotaSchedule{}).
+				Where("id = ?", weeklyQuotaScheduleSingletonID).
+				Update("next_reset_at", now.Add(domainbilling.WeeklyQuotaCycleDuration)).Error; err != nil {
+				return translateError(err)
+			}
 			cycle.EndAt = now.Add(domainbilling.WeeklyQuotaCycleDuration)
 			cycle.ResetReason = domainbilling.WeeklyQuotaResetReasonManual
 			cycle.ResetByUserID = actorUserID
@@ -113,6 +128,11 @@ func (r *Repo) ResetWeeklyQuotaCycle(ctx context.Context, now time.Time, actorUs
 		}
 		if err := setCurrentWeeklyQuotaCycle(tx, next.ID); err != nil {
 			return err
+		}
+		if err := tx.Model(&models.BillingQuotaSchedule{}).
+			Where("id = ?", weeklyQuotaScheduleSingletonID).
+			Update("next_reset_at", next.EndAt).Error; err != nil {
+			return translateError(err)
 		}
 		result = toDomainWeeklyQuotaCycle(next)
 		return nil
@@ -172,7 +192,11 @@ func ensureWeeklyQuotaCycleForUpdate(tx *gorm.DB, now time.Time, initialResetAt 
 		return nil, false, err
 	}
 	if schedule.CurrentCycleID == 0 {
-		endAt, err := normalizeInitialWeeklyReset(now, initialResetAt)
+		configuredResetAt := initialResetAt
+		if configuredResetAt.IsZero() && schedule.NextResetAt != nil {
+			configuredResetAt = *schedule.NextResetAt
+		}
+		endAt, err := normalizeInitialWeeklyReset(now, configuredResetAt)
 		if err != nil {
 			return nil, false, err
 		}
@@ -186,6 +210,9 @@ func ensureWeeklyQuotaCycleForUpdate(tx *gorm.DB, now time.Time, initialResetAt 
 		}
 		if err := setCurrentWeeklyQuotaCycle(tx, cycle.ID); err != nil {
 			return nil, false, err
+		}
+		if err := tx.Model(schedule).Update("next_reset_at", cycle.EndAt).Error; err != nil {
+			return nil, false, translateError(err)
 		}
 		return &cycle, true, nil
 	}
@@ -214,6 +241,9 @@ func ensureWeeklyQuotaCycleForUpdate(tx *gorm.DB, now time.Time, initialResetAt 
 	if current.ID != schedule.CurrentCycleID {
 		if err := setCurrentWeeklyQuotaCycle(tx, current.ID); err != nil {
 			return nil, false, err
+		}
+		if err := tx.Model(schedule).Update("next_reset_at", current.EndAt).Error; err != nil {
+			return nil, false, translateError(err)
 		}
 	}
 	return &current, false, nil

@@ -663,7 +663,7 @@
       "nextReset": "Next reset",
       "used": "Used {value}",
       "total": "Allowance {value}",
-      "remaining": "Remaining {value}",
+      "remaining": "Remaining",
       "exhausted": "Allowance exhausted",
       "available": "Allowance available"
     }

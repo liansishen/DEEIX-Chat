@@ -117,7 +117,8 @@ func (BillingAccount) TableName() string {
 // BillingQuotaSchedule 保存统一周周期的当前指针，固定使用 ID=1 作为事务锁。
 type BillingQuotaSchedule struct {
 	BaseModel
-	CurrentCycleID uint `gorm:"not null;default:0;index:idx_billing_quota_schedules_current_cycle;comment:当前统一周周期ID"`
+	CurrentCycleID uint       `gorm:"not null;default:0;index:idx_billing_quota_schedules_current_cycle;comment:当前统一周周期ID"`
+	NextResetAt    *time.Time `gorm:"comment:管理员设置的下一次统一重置时间(UTC)"`
 }
 
 // TableName 指定表名。

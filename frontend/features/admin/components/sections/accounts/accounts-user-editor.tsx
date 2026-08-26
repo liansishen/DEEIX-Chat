@@ -149,6 +149,11 @@ export function CreateUserDialog({
   resolveCreateUserInitial,
 }: CreateUserDialogProps) {
   const t = useTranslations("adminUsers");
+  const subscriptionPlanOptions = React.useMemo(
+    () => billingPlans.map((plan) => ({ code: plan.code, label: plan.name || plan.code })),
+    [billingPlans],
+  );
+  const selectedSubscriptionPlan = subscriptionPlanOptions.find((plan) => plan.code === createPayload.subscriptionTier) ?? null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -219,15 +224,16 @@ export function CreateUserDialog({
                 <div className="space-y-1">
                   <p className="text-xs font-normal text-muted-foreground">{t("editor.subscriptionPlan")}</p>
                   <Combobox
-                    items={billingPlans.map((plan) => plan.code)}
-                    value={createPayload.subscriptionTier}
+                    items={subscriptionPlanOptions}
+                    value={selectedSubscriptionPlan}
+                    itemToStringLabel={(plan) => plan?.label ?? ""}
                     filter={null}
                     autoComplete="none"
-                    onValueChange={(value) =>
+                    onValueChange={(plan) =>
                       setCreatePayload((current) => ({
                         ...current,
-                        subscriptionTier: value as UserTier,
-                        subscriptionExpiresAt: value === "free" ? "" : current.subscriptionExpiresAt,
+                        subscriptionTier: (plan?.code ?? "free") as UserTier,
+                        subscriptionExpiresAt: plan?.code === "free" ? "" : current.subscriptionExpiresAt,
                       }))
                     }
                     disabled={pending}
@@ -236,9 +242,9 @@ export function CreateUserDialog({
                     <ComboboxContent portalContainer={createDialogContentRef}>
                       <ComboboxEmpty>{t("editor.noMatchingSubscriptionPlans")}</ComboboxEmpty>
                       <ComboboxList>
-                        {(tier: UserTier) => (
-                          <ComboboxItem key={tier} value={tier}>
-                            {billingPlans.find((plan) => plan.code === tier)?.name ?? tier}
+                        {(plan) => (
+                          <ComboboxItem key={plan.code} value={plan}>
+                            {plan.label}
                           </ComboboxItem>
                         )}
                       </ComboboxList>
@@ -373,6 +379,11 @@ export function EditUserSheet({
   resolveUserInitial,
 }: EditUserSheetProps) {
   const t = useTranslations("adminUsers");
+  const subscriptionPlanOptions = React.useMemo(
+    () => billingPlans.map((plan) => ({ code: plan.code, label: plan.name || plan.code })),
+    [billingPlans],
+  );
+  const selectedSubscriptionPlan = subscriptionPlanOptions.find((plan) => plan.code === editPayload.subscriptionTier) ?? null;
   const locale = useLocale();
   const editSheetContentRef = React.useRef<HTMLDivElement | null>(null);
   const resolveUserStatusLabel = React.useCallback(
@@ -587,15 +598,16 @@ export function EditUserSheet({
                   <div className="space-y-1">
                     <Label className="text-xs font-normal text-muted-foreground">{t("editor.subscriptionPlan")}</Label>
                     <Combobox
-                      items={billingPlans.map((plan) => plan.code)}
-                      value={editPayload.subscriptionTier}
+                      items={subscriptionPlanOptions}
+                      value={selectedSubscriptionPlan}
+                      itemToStringLabel={(plan) => plan?.label ?? ""}
                       filter={null}
                       autoComplete="none"
-                      onValueChange={(value) =>
+                      onValueChange={(plan) =>
                         setEditPayload((current) => ({
                           ...current,
-                          subscriptionTier: value as UserTier,
-                          subscriptionExpiresAt: value === "free" ? "" : current.subscriptionExpiresAt,
+                          subscriptionTier: (plan?.code ?? "free") as UserTier,
+                          subscriptionExpiresAt: plan?.code === "free" ? "" : current.subscriptionExpiresAt,
                         }))
                       }
                       disabled={pending || billingPlans.length === 0}
@@ -604,9 +616,9 @@ export function EditUserSheet({
                       <ComboboxContent portalContainer={editSheetContentRef}>
                         <ComboboxEmpty>{t("editor.noMatchingSubscriptionPlans")}</ComboboxEmpty>
                         <ComboboxList>
-                          {(tier: UserTier) => (
-                            <ComboboxItem key={tier} value={tier}>
-                              {billingPlans.find((plan) => plan.code === tier)?.name ?? tier}
+                          {(plan) => (
+                            <ComboboxItem key={plan.code} value={plan}>
+                              {plan.label}
                             </ComboboxItem>
                           )}
                         </ComboboxList>

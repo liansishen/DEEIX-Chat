@@ -65,6 +65,35 @@ func TestEnsureWeeklyQuotaCycleAdvancesInFixedUTCIntervals(t *testing.T) {
 	}
 }
 
+func TestEnsureWeeklyQuotaCycleUsesPersistedResetTimeWhenCycleIsUninitialized(t *testing.T) {
+	db := openWeeklyQuotaSQLiteTestDB(t)
+	repo := NewRepo(db)
+	ctx := context.Background()
+	now := time.Date(2026, time.January, 5, 12, 0, 0, 0, time.UTC)
+	configuredReset := time.Date(2026, time.January, 8, 4, 0, 0, 0, time.UTC)
+	if err := db.Create(&model.BillingQuotaSchedule{
+		NextResetAt: &configuredReset,
+	}).Error; err != nil {
+		t.Fatalf("create quota schedule: %v", err)
+	}
+
+	cycle, err := repo.EnsureWeeklyQuotaCycle(ctx, now, time.Time{})
+	if err != nil {
+		t.Fatalf("EnsureWeeklyQuotaCycle() error = %v", err)
+	}
+	if !cycle.EndAt.Equal(configuredReset) {
+		t.Fatalf("cycle end = %s, want persisted reset %s", cycle.EndAt, configuredReset)
+	}
+
+	var schedule model.BillingQuotaSchedule
+	if err := db.First(&schedule, 1).Error; err != nil {
+		t.Fatalf("load quota schedule: %v", err)
+	}
+	if schedule.NextResetAt == nil || !schedule.NextResetAt.Equal(configuredReset) {
+		t.Fatalf("schedule next reset = %v, want %s", schedule.NextResetAt, configuredReset)
+	}
+}
+
 func TestSetWeeklyQuotaNextResetPreservesCycleAndUsage(t *testing.T) {
 	db := openWeeklyQuotaSQLiteTestDB(t)
 	repo := NewRepo(db)
@@ -91,6 +120,13 @@ func TestSetWeeklyQuotaNextResetPreservesCycleAndUsage(t *testing.T) {
 	}
 	if updated.ID != cycle.ID || !updated.EndAt.Equal(nextReset) {
 		t.Fatalf("updated cycle = %+v, want same ID %d and end %s", updated, cycle.ID, nextReset)
+	}
+	var schedule model.BillingQuotaSchedule
+	if err := db.First(&schedule, 1).Error; err != nil {
+		t.Fatalf("load quota schedule: %v", err)
+	}
+	if schedule.NextResetAt == nil || !schedule.NextResetAt.Equal(nextReset) {
+		t.Fatalf("schedule next reset = %v, want %s", schedule.NextResetAt, nextReset)
 	}
 	var persisted model.BillingWeeklyQuotaAccount
 	if err := db.Where("id = ?", account.ID).First(&persisted).Error; err != nil {
