@@ -2034,6 +2034,22 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "排序方式(default/name/created/updated/files)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
                         "type": "boolean",
                         "description": "可用状态",
                         "name": "enabled",
@@ -2307,6 +2323,34 @@ const docTemplate = `{
             }
         },
         "/admin/knowledge-bases/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "admin-knowledge-bases"
+                ],
+                "summary": "查询内置知识库详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgeBaseResponseDoc"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -2520,6 +2564,129 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/KnowledgeBaseFileMutationResponseDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/knowledge-bases/{id}/files/processing/snapshot": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-knowledge-bases"
+                ],
+                "summary": "查询内置知识库处理快照",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库公开ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "当前页处理中或待确认的文件ID，最多100个，可为空",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/GetKnowledgeBaseFileProcessingSnapshotRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgeBaseFileProcessingSnapshotResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgebaseErrorDoc"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgebaseErrorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/knowledge-bases/{id}/files/processing/statuses": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-knowledge-bases"
+                ],
+                "summary": "批量查询内置知识库文件处理状态",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "文件ID，最多100个",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/GetKnowledgeBaseFileProcessingStatusesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/KnowledgeBaseFileProcessingStatusResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgebaseErrorDoc"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgebaseErrorDoc"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgebaseErrorDoc"
                         }
                     }
                 }
@@ -6701,6 +6868,102 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/redemptions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "管理员分页查看兑换码兑换明细，含奖励内容与余额变动，已删除兑换码的历史仍可查询",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "管理员查询兑换记录",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "搜索兑换流水号、兑换码摘要、兑换码备注",
+                        "name": "query",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "兑换码ID",
+                        "name": "code_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "用户ID",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "奖励类型(balance/subscription)",
+                        "name": "reward_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "兑换时间起点(RFC3339)",
+                        "name": "created_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "兑换时间终点(RFC3339)",
+                        "name": "created_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "排序方式",
+                        "name": "sort",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/RedemptionRecordListResponseDoc"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/AdminErrorDoc"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/AdminErrorDoc"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/settings": {
             "get": {
                 "security": [
@@ -9739,6 +10002,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/conversation-runs/statuses": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按运行 ID 一次查询当前用户多个会话任务的最小状态快照",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chat"
+                ],
+                "summary": "批量查询会话运行状态",
+                "parameters": [
+                    {
+                        "description": "运行ID，最多100个",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/GetConversationRunStatusesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/ConversationRunStatusResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ConversationErrorDoc"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ConversationErrorDoc"
+                        }
+                    }
+                }
+            }
+        },
         "/conversation-runs/stream": {
             "get": {
                 "security": [
@@ -9746,7 +10063,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Sends an authoritative snapshot followed by live user-scoped run state events",
+                "description": "Sends an authoritative snapshot followed by live user-scoped run state events; the snapshot is re-sent periodically for client-side reconciliation",
                 "produces": [
                     "text/event-stream"
                 ],
@@ -11576,6 +11893,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/files/processing/statuses": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "一次查询当前用户多个文件的处理状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chat"
+                ],
+                "summary": "批量查询文件处理状态",
+                "parameters": [
+                    {
+                        "description": "文件ID，最多100个",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/GetFileProcessingStatusesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/FileProcessingStatusResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ConversationErrorDoc"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ConversationErrorDoc"
+                        }
+                    }
+                }
+            }
+        },
         "/files/{file_id}": {
             "delete": {
                 "security": [
@@ -11764,6 +12135,22 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "排序方式(default/name/created/updated/files)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "页码",
                         "name": "page",
@@ -11802,6 +12189,22 @@ const docTemplate = `{
                         "type": "string",
                         "description": "搜索关键词",
                         "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "排序方式(default/name/created/updated/files)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "知识库ID",
+                        "name": "id",
                         "in": "query"
                     },
                     {
@@ -12146,6 +12549,129 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/KnowledgeBaseFilePageResponseDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-bases/{id}/files/processing/snapshot": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "knowledge-bases"
+                ],
+                "summary": "查询当前用户可见知识库处理快照",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库公开ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "当前页处理中或待确认的文件ID，最多100个，可为空",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/GetKnowledgeBaseFileProcessingSnapshotRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgeBaseFileProcessingSnapshotResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgebaseErrorDoc"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgebaseErrorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/knowledge-bases/{id}/files/processing/statuses": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "knowledge-bases"
+                ],
+                "summary": "批量查询知识库文件处理状态",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "知识库ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "文件ID，最多100个",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/GetKnowledgeBaseFileProcessingStatusesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/KnowledgeBaseFileProcessingStatusResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgebaseErrorDoc"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgebaseErrorDoc"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/KnowledgebaseErrorDoc"
                         }
                     }
                 }
@@ -17399,6 +17925,21 @@ const docTemplate = `{
                 }
             }
         },
+        "ConversationRunStatusResponse": {
+            "type": "object",
+            "required": [
+                "runID",
+                "status"
+            ],
+            "properties": {
+                "runID": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "ConversationSearchListResponseDoc": {
             "type": "object",
             "required": [
@@ -18569,6 +19110,97 @@ const docTemplate = `{
                 }
             }
         },
+        "FileProcessingStatusResponse": {
+            "type": "object",
+            "required": [
+                "chunkCount",
+                "completedAt",
+                "detectedMIME",
+                "embedError",
+                "embedStatus",
+                "errorCode",
+                "errorMessage",
+                "extractChars",
+                "extractPages",
+                "extractStatus",
+                "fileCategory",
+                "fileID",
+                "ocrUsed",
+                "previewText",
+                "processingReady",
+                "processingStatus",
+                "ragReady",
+                "ragReason",
+                "startedAt",
+                "updatedAt"
+            ],
+            "properties": {
+                "chunkCount": {
+                    "type": "integer"
+                },
+                "completedAt": {
+                    "type": "string",
+                    "x-nullable": true,
+                    "x-omitempty": false
+                },
+                "detectedMIME": {
+                    "type": "string"
+                },
+                "embedError": {
+                    "type": "string"
+                },
+                "embedStatus": {
+                    "type": "string"
+                },
+                "errorCode": {
+                    "type": "string"
+                },
+                "errorMessage": {
+                    "type": "string"
+                },
+                "extractChars": {
+                    "type": "integer"
+                },
+                "extractPages": {
+                    "type": "integer"
+                },
+                "extractStatus": {
+                    "type": "string"
+                },
+                "fileCategory": {
+                    "type": "string"
+                },
+                "fileID": {
+                    "type": "string"
+                },
+                "ocrUsed": {
+                    "type": "boolean"
+                },
+                "previewText": {
+                    "type": "string"
+                },
+                "processingReady": {
+                    "type": "boolean"
+                },
+                "processingStatus": {
+                    "type": "string"
+                },
+                "ragReady": {
+                    "type": "boolean"
+                },
+                "ragReason": {
+                    "type": "string"
+                },
+                "startedAt": {
+                    "type": "string",
+                    "x-nullable": true,
+                    "x-omitempty": false
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
         "FileUpdateResponseDoc": {
             "type": "object",
             "required": [
@@ -18600,6 +19232,69 @@ const docTemplate = `{
                 },
                 "reused": {
                     "type": "boolean"
+                }
+            }
+        },
+        "GetConversationRunStatusesRequest": {
+            "type": "object",
+            "required": [
+                "runIDs"
+            ],
+            "properties": {
+                "runIDs": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "GetFileProcessingStatusesRequest": {
+            "type": "object",
+            "required": [
+                "fileIDs"
+            ],
+            "properties": {
+                "fileIDs": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "GetKnowledgeBaseFileProcessingSnapshotRequest": {
+            "type": "object",
+            "required": [
+                "fileIDs"
+            ],
+            "properties": {
+                "fileIDs": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "GetKnowledgeBaseFileProcessingStatusesRequest": {
+            "type": "object",
+            "required": [
+                "fileIDs"
+            ],
+            "properties": {
+                "fileIDs": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -19219,6 +19914,71 @@ const docTemplate = `{
                 }
             }
         },
+        "KnowledgeBaseFileProcessingSnapshotResponse": {
+            "type": "object",
+            "required": [
+                "knowledgeBase",
+                "statuses"
+            ],
+            "properties": {
+                "knowledgeBase": {
+                    "$ref": "#/definitions/KnowledgeBaseResponse"
+                },
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/KnowledgeBaseFileProcessingStatusResponse"
+                    }
+                }
+            }
+        },
+        "KnowledgeBaseFileProcessingStatusResponse": {
+            "type": "object",
+            "required": [
+                "chunkCount",
+                "detectedMIME",
+                "embedStatus",
+                "fileCategory",
+                "fileID",
+                "processing",
+                "processingReady",
+                "processingStatus",
+                "ragOptOut",
+                "updatedAt"
+            ],
+            "properties": {
+                "chunkCount": {
+                    "type": "integer"
+                },
+                "detectedMIME": {
+                    "type": "string"
+                },
+                "embedStatus": {
+                    "type": "string"
+                },
+                "fileCategory": {
+                    "type": "string"
+                },
+                "fileID": {
+                    "type": "string"
+                },
+                "processing": {
+                    "type": "boolean"
+                },
+                "processingReady": {
+                    "type": "boolean"
+                },
+                "processingStatus": {
+                    "type": "string"
+                },
+                "ragOptOut": {
+                    "type": "boolean"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
         "KnowledgeBaseFileResponse": {
             "type": "object",
             "required": [
@@ -19230,6 +19990,7 @@ const docTemplate = `{
                 "fileID",
                 "fileName",
                 "mimeType",
+                "processing",
                 "processingReady",
                 "processingStatus",
                 "ragOptOut",
@@ -19260,6 +20021,9 @@ const docTemplate = `{
                 },
                 "mimeType": {
                     "type": "string"
+                },
+                "processing": {
+                    "type": "boolean"
                 },
                 "processingReady": {
                     "type": "boolean"
@@ -19331,6 +20095,7 @@ const docTemplate = `{
                 "enabled",
                 "fileCount",
                 "name",
+                "processingFileCount",
                 "publicID",
                 "readyFileCount",
                 "revision",
@@ -19353,6 +20118,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "processingFileCount": {
+                    "type": "integer"
                 },
                 "publicID": {
                     "type": "string"
@@ -23131,6 +23899,136 @@ const docTemplate = `{
                 }
             }
         },
+        "RedemptionRecordListResponseDoc": {
+            "type": "object",
+            "required": [
+                "data",
+                "errorMsg"
+            ],
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "required": [
+                        "results",
+                        "total"
+                    ],
+                    "properties": {
+                        "results": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/RedemptionRecordResponse"
+                            }
+                        },
+                        "total": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "errorMsg": {
+                    "type": "string"
+                }
+            }
+        },
+        "RedemptionRecordResponse": {
+            "type": "object",
+            "required": [
+                "balanceAfterNanousd",
+                "balanceBeforeNanousd",
+                "codeDescription",
+                "codeHint",
+                "codeID",
+                "codeStatus",
+                "createdAt",
+                "creditNanousd",
+                "creditUSD",
+                "durationDays",
+                "id",
+                "mode",
+                "planID",
+                "planName",
+                "refNo",
+                "rewardType",
+                "snapshotJSON",
+                "subscriptionID",
+                "userDisplayName",
+                "userID",
+                "userLabel",
+                "username"
+            ],
+            "properties": {
+                "balanceAfterNanousd": {
+                    "type": "integer",
+                    "x-nullable": true,
+                    "x-omitempty": false
+                },
+                "balanceBeforeNanousd": {
+                    "description": "BalanceBeforeNanousd / BalanceAfterNanousd 来自余额流水；订阅类兑换无流水时为 null。",
+                    "type": "integer",
+                    "x-nullable": true,
+                    "x-omitempty": false
+                },
+                "codeDescription": {
+                    "type": "string"
+                },
+                "codeHint": {
+                    "type": "string"
+                },
+                "codeID": {
+                    "type": "integer"
+                },
+                "codeStatus": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "creditNanousd": {
+                    "type": "integer"
+                },
+                "creditUSD": {
+                    "type": "number"
+                },
+                "durationDays": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "planID": {
+                    "type": "integer"
+                },
+                "planName": {
+                    "type": "string"
+                },
+                "refNo": {
+                    "type": "string"
+                },
+                "rewardType": {
+                    "type": "string"
+                },
+                "snapshotJSON": {
+                    "type": "string"
+                },
+                "subscriptionID": {
+                    "type": "integer"
+                },
+                "userDisplayName": {
+                    "type": "string"
+                },
+                "userID": {
+                    "type": "integer"
+                },
+                "userLabel": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "RedemptionResponse": {
             "type": "object",
             "required": [
@@ -24672,6 +25570,7 @@ const docTemplate = `{
                 "id",
                 "inputSchemaJSON",
                 "name",
+                "priceNanousd",
                 "serverID",
                 "serverName",
                 "sortOrder",
@@ -24717,6 +25616,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "priceNanousd": {
+                    "type": "integer"
                 },
                 "serverID": {
                     "type": "integer"
@@ -25195,6 +26097,11 @@ const docTemplate = `{
                 },
                 "displayName": {
                     "type": "string"
+                },
+                "priceNanousd": {
+                    "description": "PriceNanousd 单次调用价格（nano USD），0 表示不单独计费。",
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "status": {
                     "type": "string"
@@ -27328,7 +28235,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "0.3.6",
+	Version:          "0.4.0",
 	Host:             "",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},

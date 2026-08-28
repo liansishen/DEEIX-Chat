@@ -56,10 +56,7 @@ type MarkdownLinkProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & {
   href?: string;
 };
 
-type MarkdownImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
-  alt?: string;
-  src?: string;
-};
+type MarkdownImageProps = React.ImgHTMLAttributes<HTMLImageElement>;
 
 export type MarkdownImageActions = {
   canEditImage?: (src: string) => boolean;
@@ -112,7 +109,11 @@ function resolveLinkKind(href: string): ResolvedLinkKind {
 
   try {
     const targetURL = new URL(href, currentOrigin);
-    if (targetURL.protocol === "javascript:") {
+    if (
+      targetURL.protocol === "javascript:" ||
+      targetURL.protocol === "data:" ||
+      targetURL.protocol === "vbscript:"
+    ) {
       return "invalid";
     }
     if (targetURL.origin === currentOrigin) {
@@ -645,7 +646,9 @@ export function MarkdownSup({ children, className, node: _node, style, ...props 
   );
 }
 
-export function MarkdownImage({ alt, className, onError, onLoad, src, ...props }: MarkdownImageProps) {
+export function MarkdownImage({ alt, className, onError, onLoad, src: srcProp, ...props }: MarkdownImageProps) {
+  // Markdown 渲染只产生字符串 src；Blob 形态的 src 不在渲染范围内。
+  const src = typeof srcProp === "string" ? srcProp : undefined;
   const t = useTranslations("chat.markdown");
   const insideLink = React.useContext(StreamdownLinkContext);
   const imageActions = React.useContext(MarkdownImageActionsContext);
