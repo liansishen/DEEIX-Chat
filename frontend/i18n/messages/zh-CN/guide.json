@@ -75,6 +75,7 @@
   "themePreset": {
     "default": "默认",
     "azure": "Azure",
+    "claude": "Claude",
     "cobalt": "Cobalt",
     "graphite": "Graphite",
     "lagoon": "Lagoon",

@@ -120,6 +120,7 @@ const ONBOARDING_LOGO_ITEMS: LogoCarouselLogo[] = [
 const ONBOARDING_THEME_PRESETS: ThemePreset[] = [
   "default",
   "azure",
+  "claude",
   "cobalt",
   "graphite",
   "lagoon",
