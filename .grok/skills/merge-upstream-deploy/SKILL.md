@@ -32,21 +32,25 @@ description: 合并 DEEIX-Chat 官方上游更新到本 fork，审阅并保留 f
 - 本地发布根目录：`/opt/deeix-chat`；当前软链接：`/opt/deeix-chat/current`；发布目录：`/opt/deeix-chat/releases/<commit>`；配置：`/opt/deeix-chat/config.yaml`；应用端口：`18080`。
 - SQLite：`/var/lib/docker/volumes/deeix-chat-app-data/_data/deeix.db`；文件存储：`/var/lib/docker/volumes/deeix-chat-app-storage/_data`。
 
-## 已知上游升级内容
+## 识别本次上游升级内容
 
-官方 `v0.4.0`/对应开发线包含以下重点。每次同步时先用 `git diff --stat` 和 `git diff --name-status` 确认实际差异，不要假设上游版本内容没有变化：
+上游版本号和功能范围会随每次升级变化。不要在 skill 中预设某个版本号或复制上一次的功能清单；每次都从实际目标 ref 提取并记录本次升级内容：
 
-- Temporary Chats 临时聊天和临时聊天工具循环。
-- xAI 视频生成扩展及媒体生成流程改进。
-- Agent 轨迹、reasoning、工具步骤和结构化工具卡片重构。
-- MCP 工具按次计费、工具价格管理和用量快照。
-- 模型上下文窗口、上下文预算和自动压缩改进。
-- 文件提取、文件处理队列、知识库和预览流程优化。
-- 会话提交、分支、流式响应、截图和前端聊天 hooks 大规模重构。
-- 优雅关闭、运行时配置、缓存维护和稳定性改进。
-- API contract、Swagger 文档、前端依赖和构建流程更新。
+1. 确定目标 ref。用户指定版本时使用该 tag；未指定时使用上游默认开发分支，并记录完整提交号。
+2. 找到本地基线与目标 ref 的共同祖先，结合提交记录、文件状态和差异统计识别变化。
+3. 按以下类别审阅差异：后端领域与应用逻辑、数据库模型和迁移、HTTP/API contract、前端页面和状态、配置与环境变量、依赖和构建流程、CI/CD、运行时和部署行为。
+4. 在最终报告中列出本次实际升级内容、受影响的 fork 功能、冲突处理决定、CI 验证范围和未覆盖风险。
 
-合并后必须同时保证这些上游能力和本 fork 的 weekly、时区、域名、关闭注册及 SQLite 部署约束。
+```bash
+git log --oneline --decorate <base>..<target>
+git diff --stat <base>..<target>
+git diff --name-status <base>..<target>
+git diff --summary <base>..<target>
+```
+
+如果目标 ref 是正式版本，优先查看对应 release notes；release notes 只用于补充说明，代码差异和 CI 结果才是升级判断依据。
+
+合并后必须同时保证目标 ref 中实际新增或修改的上游能力，以及本 fork 的 weekly、时区、域名、关闭注册和 SQLite 部署约束。
 
 ## 合并流程
 
