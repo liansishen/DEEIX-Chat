@@ -315,6 +315,7 @@ var exactErrorSpecs = map[string]errorSpec{
 	"invalid content moderation model":                                       {Code: "content_moderation.invalid_config", Message: "invalid content moderation model"},
 	"content moderation probe failed":                                        {Code: "content_moderation.probe_failed", Message: "content moderation probe failed"},
 	"content blocked by moderation":                                          {Code: "content_moderation.blocked", Message: "content blocked by moderation"},
+	"weekly quota is exhausted":                                              {Code: "billing.weekly_quota_exceeded", Message: "weekly quota is exhausted"},
 
 	"deleting this identity provider would remove the only login method for some users": {Code: "identity_provider.delete_conflict", Message: "deleting this identity provider would remove the only login method for some users"},
 }
@@ -596,6 +597,7 @@ var fallbackMessages = map[string]string{
 	"media.artifact_unavailable":                        "generated media artifact is temporarily unavailable",
 	"media.image_stream_unsupported":                    "upstream may not support image streaming; disable image.stream for this model",
 	"billing.period_credit_exceeded":                    "period usage credit exceeded",
+	"billing.weekly_quota_exceeded":                     "weekly quota is exhausted",
 	"billing.invalid_subscription_tier":                 "invalid subscription tier",
 	"billing.subscription_expiry_required":              "subscription expiry required",
 	"billing.invalid_subscription_expiry":               "invalid subscription expiry",
