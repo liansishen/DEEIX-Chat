@@ -92,7 +92,7 @@ func (r *Repo) ResetWeeklyQuotaCycle(ctx context.Context, now time.Time, actorUs
 			return err
 		}
 		if initialized || cycle.StartAt.Equal(now) {
-			updates := map[string]interface{}{
+			updates := map[string]any{
 				"end_at":           now.Add(domainbilling.WeeklyQuotaCycleDuration),
 				"reset_reason":     domainbilling.WeeklyQuotaResetReasonManual,
 				"reset_by_user_id": actorUserID,

@@ -169,7 +169,7 @@ func (r *Repo) AddWeeklyUsageAndSettleQuota(ctx context.Context, usage *domainbi
 		}
 		ledger := *usage
 		ledger.BalanceAfterNanousd = nil
-		ledger.PricingSnapshotJSON = withPeriodSettlementSnapshot(ledger.PricingSnapshotJSON, map[string]interface{}{
+		ledger.PricingSnapshotJSON = withPeriodSettlementSnapshot(ledger.PricingSnapshotJSON, map[string]any{
 			"weekly_origin_cycle_id":           originCycleID,
 			"weekly_settlement_cycle_id":       completionCycle.ID,
 			"weekly_limit_nanousd":             reservationRow.WeeklyLimitNanousd,
@@ -210,7 +210,7 @@ func settleWeeklyUsageReservation(tx *gorm.DB, reservation *models.UsageReservat
 		return repository.ErrInvalidInput
 	}
 	settledAt := time.Now().UTC()
-	return translateError(tx.Model(reservation).Updates(map[string]interface{}{
+	return translateError(tx.Model(reservation).Updates(map[string]any{
 		"status":                  domainbilling.UsageReservationStatusSettled,
 		"usage_ledger_id":         usageLedgerID,
 		"settled_nanousd":         settledNanousd,

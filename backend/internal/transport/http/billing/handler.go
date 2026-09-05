@@ -315,7 +315,7 @@ func (h *Handler) SetWeeklyQuotaResetTime(c *gin.Context) {
 		return
 	}
 	actor := middleware.MustUserID(c)
-	h.recordAudit(c, actor, "set_weekly_quota_reset_time", "billing_weekly_quota", strconv.FormatUint(uint64(cycle.ID), 10), map[string]interface{}{"next_reset_at": cycle.EndAt})
+	h.recordAudit(c, actor, "set_weekly_quota_reset_time", "billing_weekly_quota", strconv.FormatUint(uint64(cycle.ID), 10), map[string]any{"next_reset_at": cycle.EndAt})
 	response.Success(c, WeeklyQuotaCycleDataResponse{Cycle: toWeeklyQuotaCycleResponse(cycle)})
 }
 
@@ -337,7 +337,7 @@ func (h *Handler) ResetWeeklyQuotaNow(c *gin.Context) {
 		response.ErrorFrom(c, http.StatusBadRequest, err)
 		return
 	}
-	h.recordAudit(c, actor, "reset_weekly_quota_now", "billing_weekly_quota", strconv.FormatUint(uint64(cycle.ID), 10), map[string]interface{}{"next_reset_at": cycle.EndAt})
+	h.recordAudit(c, actor, "reset_weekly_quota_now", "billing_weekly_quota", strconv.FormatUint(uint64(cycle.ID), 10), map[string]any{"next_reset_at": cycle.EndAt})
 	response.Success(c, WeeklyQuotaCycleDataResponse{Cycle: toWeeklyQuotaCycleResponse(cycle)})
 }
 func writeSettingsValidationError(c *gin.Context, err error) {
