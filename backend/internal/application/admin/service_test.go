@@ -176,8 +176,15 @@ func TestPatchUserByAdminAllowsWeeklySubscriptionUpdate(t *testing.T) {
 	service.SetSubscriptionResolver(subscriptionResolverFake{billingMode: "weekly"})
 	tier := "pro"
 	if _, err := service.PatchUserByAdmin(
-		context.Background(), "req_weekly", 1, 2,
-		PatchUserInput{SubscriptionTier: &tier}, "127.0.0.1", "test",
+		context.Background(),
+		PatchUserByAdminInput{
+			RequestID:    "req_weekly",
+			ActorUserID:  1,
+			TargetUserID: 2,
+			Patch:        PatchUserInput{SubscriptionTier: &tier},
+			IP:           "127.0.0.1",
+			UserAgent:    "test",
+		},
 	); err != nil {
 		t.Fatalf("expected weekly subscription update to succeed, got %v", err)
 	}
