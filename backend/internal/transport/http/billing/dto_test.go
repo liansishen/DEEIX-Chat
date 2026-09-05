@@ -34,6 +34,7 @@ func TestRequiredZeroValueBillingFields(t *testing.T) {
 				PeriodCreditUSD: &zeroFloat,
 				AmountUSD:       &zeroFloat,
 				BillingInterval: "month",
+				DiscountPercent: new(int),
 			},
 		},
 		{

@@ -221,10 +221,6 @@ func CleanupRemovedColumns(db *gorm.DB) error {
 	if err := dropColumns(db, &model.Skill{}, []string{"content", "sections_json"}); err != nil {
 		return err
 	}
-	// discount_percent 从未进入任何计价路径，随字段移除一并清理。
-	if err := dropColumns(db, &model.BillingPlan{}, []string{"discount_percent"}); err != nil {
-		return err
-	}
 	return nil
 }
 
