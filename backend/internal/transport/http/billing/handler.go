@@ -285,7 +285,7 @@ func (h *Handler) PatchBillingConfig(c *gin.Context) {
 func (h *Handler) GetWeeklyQuotaResetTime(c *gin.Context) {
 	cycle, err := h.service.GetWeeklyQuotaCycle(c.Request.Context(), time.Now().UTC())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "get weekly quota reset time failed")
+		response.InternalError(c)
 		return
 	}
 	response.Success(c, WeeklyQuotaCycleDataResponse{Cycle: toWeeklyQuotaCycleResponse(cycle)})

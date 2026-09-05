@@ -3716,6 +3716,15 @@ func clampNonNegative(value int64) int64 {
 	}
 	return value
 }
+func clampPercent(value int) int {
+	if value < 0 {
+		return 0
+	}
+	if value > 100 {
+		return 100
+	}
+	return value
+}
 
 func normalizeUsageCountMap(items map[string]int64) map[string]int64 {
 	if len(items) == 0 {

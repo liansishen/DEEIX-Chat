@@ -129,7 +129,7 @@ func (s *Service) runTemporaryGeneration(ctx context.Context, input temporaryGen
 	if err != nil {
 		return buildResult(), err
 	}
-	if output != nil && len(output.ToolCalls) > 0 && s.weeklyUsageCutoffReached(ctx, input.UsageAuthorization, input.UserID, 0, route, totalUsage, 1) {
+	if output != nil && len(output.ToolCalls) > 0 && s.weeklyUsageCutoffReached(ctx, request.UsageAuthorization, request.UserID, 0, route, totalUsage, 1) {
 		return buildResult(), ErrMessageGenerationCanceled
 	}
 
@@ -205,7 +205,7 @@ func (s *Service) runTemporaryGeneration(ctx context.Context, input temporaryGen
 		if err != nil {
 			return buildResult(), err
 		}
-		if output != nil && len(output.ToolCalls) > 0 && s.weeklyUsageCutoffReached(ctx, input.UsageAuthorization, input.UserID, 0, route, totalUsage, 1) {
+		if output != nil && len(output.ToolCalls) > 0 && s.weeklyUsageCutoffReached(ctx, request.UsageAuthorization, request.UserID, 0, route, totalUsage, 1) {
 			return buildResult(), ErrMessageGenerationCanceled
 		}
 	}

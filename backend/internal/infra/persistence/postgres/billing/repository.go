@@ -3147,6 +3147,15 @@ func clampNonNegative(value int64) int64 {
 	}
 	return value
 }
+func clampPercent(value int) int {
+	if value < 0 {
+		return 0
+	}
+	if value > 100 {
+		return 100
+	}
+	return value
+}
 
 func minInt64(a int64, b int64) int64 {
 	if a < b {
