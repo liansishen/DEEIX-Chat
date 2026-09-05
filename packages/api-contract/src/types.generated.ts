@@ -441,6 +441,8 @@ export interface BillingOverviewResponse {
   periodUsedUSD: number;
   plan: BillingPlanResponse | null;
   subscriptionEntitlements: SubscriptionEntitlementResponse[];
+  totalSpentNanousd: number;
+  totalSpentUSD: number;
   weeklyCreditNanousd: number;
   weeklyCreditUSD: number;
   weeklyEndAt: string | null;
@@ -451,8 +453,6 @@ export interface BillingOverviewResponse {
   weeklyStartAt: string | null;
   weeklyUsedNanousd: number;
   weeklyUsedUSD: number;
-  totalSpentNanousd: number;
-  totalSpentUSD: number;
 }
 
 export interface BillingOverviewResponseDoc {

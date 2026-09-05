@@ -16197,6 +16197,8 @@
                 "periodUsedUSD",
                 "plan",
                 "subscriptionEntitlements",
+                "totalSpentNanousd",
+                "totalSpentUSD",
                 "weeklyCreditNanousd",
                 "weeklyCreditUSD",
                 "weeklyEndAt",
@@ -16206,9 +16208,7 @@
                 "weeklyRemainingUSD",
                 "weeklyStartAt",
                 "weeklyUsedNanousd",
-                "weeklyUsedUSD",
-                "totalSpentNanousd",
-                "totalSpentUSD"
+                "weeklyUsedUSD"
             ],
             "properties": {
                 "account": {
@@ -16266,6 +16266,12 @@
                         "$ref": "#/definitions/SubscriptionEntitlementResponse"
                     }
                 },
+                "totalSpentNanousd": {
+                    "type": "integer"
+                },
+                "totalSpentUSD": {
+                    "type": "number"
+                },
                 "weeklyCreditNanousd": {
                     "type": "integer"
                 },
@@ -16300,12 +16306,6 @@
                     "type": "integer"
                 },
                 "weeklyUsedUSD": {
-                    "type": "number"
-                },
-                "totalSpentNanousd": {
-                    "type": "integer"
-                },
-                "totalSpentUSD": {
                     "type": "number"
                 }
             }

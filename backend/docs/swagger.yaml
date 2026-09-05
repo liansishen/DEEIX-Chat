@@ -1086,6 +1086,10 @@ definitions:
         items:
           $ref: '#/definitions/SubscriptionEntitlementResponse'
         type: array
+      totalSpentNanousd:
+        type: integer
+      totalSpentUSD:
+        type: number
       weeklyCreditNanousd:
         type: integer
       weeklyCreditUSD:
@@ -1112,10 +1116,6 @@ definitions:
         type: integer
       weeklyUsedUSD:
         type: number
-      totalSpentNanousd:
-        type: integer
-      totalSpentUSD:
-        type: number
     required:
     - account
     - mode
@@ -1129,6 +1129,8 @@ definitions:
     - periodUsedUSD
     - plan
     - subscriptionEntitlements
+    - totalSpentNanousd
+    - totalSpentUSD
     - weeklyCreditNanousd
     - weeklyCreditUSD
     - weeklyEndAt
@@ -1139,8 +1141,6 @@ definitions:
     - weeklyStartAt
     - weeklyUsedNanousd
     - weeklyUsedUSD
-    - totalSpentNanousd
-    - totalSpentUSD
     type: object
   BillingOverviewResponseDoc:
     properties:

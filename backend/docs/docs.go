@@ -16204,6 +16204,8 @@ const docTemplate = `{
                 "periodUsedUSD",
                 "plan",
                 "subscriptionEntitlements",
+                "totalSpentNanousd",
+                "totalSpentUSD",
                 "weeklyCreditNanousd",
                 "weeklyCreditUSD",
                 "weeklyEndAt",
@@ -16213,9 +16215,7 @@ const docTemplate = `{
                 "weeklyRemainingUSD",
                 "weeklyStartAt",
                 "weeklyUsedNanousd",
-                "weeklyUsedUSD",
-                "totalSpentNanousd",
-                "totalSpentUSD"
+                "weeklyUsedUSD"
             ],
             "properties": {
                 "account": {
@@ -16273,6 +16273,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/SubscriptionEntitlementResponse"
                     }
                 },
+                "totalSpentNanousd": {
+                    "type": "integer"
+                },
+                "totalSpentUSD": {
+                    "type": "number"
+                },
                 "weeklyCreditNanousd": {
                     "type": "integer"
                 },
@@ -16307,12 +16313,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "weeklyUsedUSD": {
-                    "type": "number"
-                },
-                "totalSpentNanousd": {
-                    "type": "integer"
-                },
-                "totalSpentUSD": {
                     "type": "number"
                 }
             }
