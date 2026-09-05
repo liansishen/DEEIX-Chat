@@ -1469,6 +1469,9 @@ func (s *Service) EnsureUsageAuthorizationBudget(ctx context.Context, authorizat
 		return nil
 	}
 	reservation := authorization.Reservation
+	if strings.TrimSpace(authorization.Mode) == "weekly" || strings.TrimSpace(reservation.Mode) == "weekly" {
+		return nil
+	}
 	if requiredNanousd <= reservation.BalanceNanousd+reservation.PeriodCreditNanousd {
 		return nil
 	}

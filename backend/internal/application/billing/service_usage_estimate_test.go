@@ -184,6 +184,26 @@ func TestEnsureUsageAuthorizationBudgetSkipsWhenReservationAlreadyCovers(t *test
 		t.Fatalf("reservation raised to %d, want no raise when budget already covers the estimate", repo.raisedReservationNanousd)
 	}
 }
+func TestEnsureUsageAuthorizationBudgetSkipsWeeklyReservation(t *testing.T) {
+	repo := &billingRepositoryStub{mode: "weekly", raiseReservationErr: repository.ErrInsufficientBalance}
+	service := NewService(repo)
+	authorization := &domainbilling.UsageAuthorization{
+		Mode: "weekly",
+		Reservation: &domainbilling.UsageBalanceReservation{
+			UserID:              1,
+			RefNo:               "run_weekly",
+			Mode:                "weekly",
+			WeeklyCreditNanousd: 60_000_000_000,
+		},
+	}
+
+	if err := service.EnsureUsageAuthorizationBudget(context.Background(), authorization, 1_000_000); err != nil {
+		t.Fatalf("EnsureUsageAuthorizationBudget() weekly error = %v", err)
+	}
+	if repo.raisedReservationNanousd != 0 {
+		t.Fatalf("weekly reservation raised to %d, want no balance reservation raise", repo.raisedReservationNanousd)
+	}
+}
 
 func TestEnsureUsageAuthorizationBudgetRaisesReservationToEstimate(t *testing.T) {
 	repo := &billingRepositoryStub{mode: "usage"}
