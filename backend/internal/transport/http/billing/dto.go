@@ -394,6 +394,8 @@ type BillingOverviewResponse struct {
 	WeeklyRemainingNanousd   int64                             `json:"weeklyRemainingNanousd"`
 	WeeklyExhausted          bool                              `json:"weeklyExhausted"`
 	Account                  *BillingAccountResponse           `json:"account" extensions:"x-nullable,!x-omitempty"`
+	TotalSpentUSD            float64                           `json:"totalSpentUSD"`
+	TotalSpentNanousd        int64                             `json:"totalSpentNanousd"`
 	SubscriptionEntitlements []SubscriptionEntitlementResponse `json:"subscriptionEntitlements"`
 }
 
@@ -726,11 +728,11 @@ type RedemptionApplyResponseDoc struct {
 
 // ErrorDoc 错误响应。
 type ErrorDoc struct {
-	ErrorMsg  string      `json:"errorMsg"`
-	ErrorCode string      `json:"errorCode,omitempty"`
-	Details   interface{} `json:"details,omitempty"`
-	RequestID string      `json:"requestId,omitempty"`
-	Data      interface{} `json:"data"`
+	ErrorMsg  string `json:"errorMsg"`
+	ErrorCode string `json:"errorCode,omitempty"`
+	Details   any    `json:"details,omitempty"`
+	RequestID string `json:"requestId,omitempty"`
+	Data      any    `json:"data"`
 }
 
 // ── mapping 函数 ─────────────────────────────────────────────────────────────
@@ -937,6 +939,8 @@ func toBillingOverviewResponse(item *appbilling.BillingOverview) BillingOverview
 		WeeklyRemainingNanousd:   item.WeeklyRemainingNanousd,
 		WeeklyExhausted:          item.WeeklyExhausted,
 		Account:                  toBillingAccountViewResponse(item.Account),
+		TotalSpentUSD:            nanousdToUSD(item.TotalSpentNanousd),
+		TotalSpentNanousd:        item.TotalSpentNanousd,
 		SubscriptionEntitlements: toSubscriptionEntitlementResponses(item.SubscriptionEntitlements),
 	}
 }
@@ -1064,7 +1068,7 @@ func usagePricingSnapshotIdentity(value string) usagePricingSnapshotIdentityResu
 	if strings.TrimSpace(value) == "" {
 		return usagePricingSnapshotIdentityResult{}
 	}
-	var payload map[string]interface{}
+	var payload map[string]any
 	if err := json.Unmarshal([]byte(value), &payload); err != nil {
 		return usagePricingSnapshotIdentityResult{}
 	}
@@ -1074,7 +1078,7 @@ func usagePricingSnapshotIdentity(value string) usagePricingSnapshotIdentityResu
 	}
 }
 
-func stringSnapshotField(payload map[string]interface{}, key string) string {
+func stringSnapshotField(payload map[string]any, key string) string {
 	value, ok := payload[key]
 	if !ok {
 		return ""
@@ -1090,7 +1094,7 @@ func sanitizeUsagePricingSnapshotJSON(value string) string {
 	if strings.TrimSpace(value) == "" {
 		return "{}"
 	}
-	var payload map[string]interface{}
+	var payload map[string]any
 	if err := json.Unmarshal([]byte(value), &payload); err != nil {
 		return "{}"
 	}
@@ -1102,18 +1106,18 @@ func sanitizeUsagePricingSnapshotJSON(value string) string {
 	return string(result)
 }
 
-func deleteUpstreamNameSnapshotFields(payload map[string]interface{}, parentKey string) {
+func deleteUpstreamNameSnapshotFields(payload map[string]any, parentKey string) {
 	for key, value := range payload {
 		if isUpstreamNameSnapshotField(key, parentKey) {
 			delete(payload, key)
 			continue
 		}
 		switch child := value.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			deleteUpstreamNameSnapshotFields(child, key)
-		case []interface{}:
+		case []any:
 			for _, item := range child {
-				if itemMap, ok := item.(map[string]interface{}); ok {
+				if itemMap, ok := item.(map[string]any); ok {
 					deleteUpstreamNameSnapshotFields(itemMap, key)
 				}
 			}

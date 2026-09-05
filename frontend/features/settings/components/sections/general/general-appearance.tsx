@@ -280,7 +280,7 @@ function ThemePresetPreviewCard({
     <button
       type="button"
       onClick={() => onSelect(item.value)}
-      className="group min-w-0 text-left"
+      className="group min-w-0 rounded-xl text-left"
       aria-pressed={active}
     >
       <div
@@ -358,7 +358,7 @@ function ThemePreviewCard({
     <button
       type="button"
       onClick={() => onSelect(mode)}
-      className="group text-left"
+      className="group rounded-xl text-left"
       aria-pressed={active}
     >
       <div
@@ -424,7 +424,7 @@ function FontSizePreviewCard({
     <button
       type="button"
       onClick={() => onSelect(item.value)}
-      className="group text-left"
+      className="group rounded-xl text-left"
       aria-pressed={active}
     >
       <div

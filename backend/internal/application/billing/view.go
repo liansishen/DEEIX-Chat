@@ -50,6 +50,7 @@ type BillingOverview struct {
 	WeeklyRemainingNanousd   int64
 	WeeklyExhausted          bool
 	Account                  *BillingAccountView
+	TotalSpentNanousd        int64
 	SubscriptionEntitlements []SubscriptionEntitlementView
 }
 

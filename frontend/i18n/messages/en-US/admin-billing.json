@@ -65,7 +65,7 @@
   "plans": {
     "title": "Plans",
     "dialogTitle": "Subscription plan",
-    "dialogDescription": "Configure plan price, usage credit, and discount.",
+    "dialogDescription": "Configure plan price, usage credit, and permission group.",
     "name": "Name",
     "description": "Description",
     "price": "Price",
@@ -75,13 +75,13 @@
     "tableWeeklyCredit": "Weekly credit",
     "perWeek": "per week",
     "discount": "Discount",
+    "tableDiscount": "Discount",
     "permissionGroup": "Permission group",
     "permissionGroupDescription": "Users subscribed to this plan automatically gain this permission group's model access.",
     "tablePlan": "Plan",
     "tableDescription": "Description",
     "tablePrice": "Price",
     "tableCredit": "Credit",
-    "tableDiscount": "Discount",
     "empty": "No plans",
     "perPeriod": "/ period",
     "intervals": {
