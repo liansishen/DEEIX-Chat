@@ -18,6 +18,12 @@ import {
   THEME_PRESETS,
   type ThemePreset,
 } from "@/shared/model/theme";
+import {
+  type CustomThemeConfig,
+  CUSTOM_THEME_STORAGE_KEY,
+  parseCustomTheme,
+  validateAndSanitizeCustomTheme,
+} from "@/shared/model/custom-theme";
 import { isOneOf, isRecord, parseJSON } from "@/shared/lib/type-guards";
 
 export type AppearancePreferences = {
@@ -25,6 +31,7 @@ export type AppearancePreferences = {
   chatFont: ChatFontOption;
   chatFontWeight: ChatFontWeightOption;
   fontSize: FontSizeOption;
+  customTheme?: CustomThemeConfig;
 };
 
 export type AppearancePreferencePatch = Partial<AppearancePreferences>;
@@ -54,6 +61,12 @@ export function parseAppearancePreferences(raw: string | null | undefined): Appe
   if (isFontSizeOption(parsed.fontSize)) {
     result.fontSize = parsed.fontSize;
   }
+  if (parsed.customTheme !== undefined) {
+    const validated = validateAndSanitizeCustomTheme(parsed.customTheme);
+    if (validated) {
+      result.customTheme = validated;
+    }
+  }
   return result;
 }
 
@@ -76,23 +89,43 @@ export function readLocalAppearancePreferences(): AppearancePreferences {
     chatFont: isChatFontOption(storedChatFont) ? storedChatFont : "default",
     chatFontWeight: isChatFontWeightOption(storedChatFontWeight) ? storedChatFontWeight : "regular",
     fontSize: isFontSizeOption(storedFontSize) ? storedFontSize : "standard",
+    customTheme: parseCustomTheme(window.localStorage.getItem(CUSTOM_THEME_STORAGE_KEY)),
   };
 }
 
 export function resolveAppearancePreferences(
   accountPreferences: string | null | undefined,
 ): AppearancePreferences {
+  if (!accountPreferences || accountPreferences.trim() === "") {
+    return {
+      preset: "default",
+      chatFont: "default",
+      chatFontWeight: "regular",
+      fontSize: "standard",
+      customTheme: undefined,
+    };
+  }
+
+  const parsed = parseAppearancePreferences(accountPreferences);
+  const local = readLocalAppearancePreferences();
   return {
-    ...readLocalAppearancePreferences(),
-    ...parseAppearancePreferences(accountPreferences),
+    preset: parsed.preset ?? "default",
+    chatFont: parsed.chatFont ?? local.chatFont,
+    chatFontWeight: parsed.chatFontWeight ?? local.chatFontWeight,
+    fontSize: parsed.fontSize ?? local.fontSize,
+    customTheme: parsed.customTheme,
   };
 }
 
 export function serializeAppearancePreferences(preferences: AppearancePreferences): string {
-  return JSON.stringify({
+  const payload: Record<string, unknown> = {
     preset: preferences.preset,
     chatFont: preferences.chatFont,
     chatFontWeight: preferences.chatFontWeight,
     fontSize: preferences.fontSize,
-  });
+  };
+  if (preferences.customTheme && (Object.keys(preferences.customTheme.light).length > 0 || Object.keys(preferences.customTheme.dark).length > 0)) {
+    payload.customTheme = preferences.customTheme;
+  }
+  return JSON.stringify(payload);
 }

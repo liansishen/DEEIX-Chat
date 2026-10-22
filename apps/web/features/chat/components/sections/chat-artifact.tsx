@@ -176,7 +176,7 @@ function ChatArtifactPanel({
   onClose,
 }: ChatArtifactPanelProps) {
   const t = useTranslations("chat.artifacts");
-  const { preset, resolvedTheme } = useTheme();
+  const { preset, resolvedTheme, themeRevision } = useTheme();
   const chatFont = useChatFontPreference();
   const chatFontWeight = useChatFontWeightPreference();
   const fontSize = useFontSizePreference();
@@ -187,7 +187,7 @@ function ChatArtifactPanel({
 
   React.useEffect(() => {
     setPreviewTheme(captureHTMLVisualThemeSnapshot(resolvedTheme));
-  }, [chatFont, chatFontWeight, fontSize, preset, resolvedTheme]);
+  }, [chatFont, chatFontWeight, fontSize, preset, resolvedTheme, themeRevision]);
 
   // A document is only built once its code block has closed: rebuilding srcdoc on every
   // streamed chunk reloads the frame and re-runs a half-written page each time.

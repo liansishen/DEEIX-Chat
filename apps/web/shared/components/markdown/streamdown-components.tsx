@@ -625,7 +625,7 @@ export function MarkdownLink({ children, className, href, onClick, style, ...pro
     }
     return (
       <span
-        className={cn("wrap-anywhere font-medium text-primary underline", className)}
+        className={cn("wrap-anywhere font-medium text-[var(--link,var(--primary))] underline", className)}
         data-incomplete={incomplete || undefined}
         data-streamdown="link"
       >
@@ -639,7 +639,7 @@ export function MarkdownLink({ children, className, href, onClick, style, ...pro
       <a
         {...props}
         className={cn(
-          "wrap-anywhere font-medium text-primary underline",
+          "wrap-anywhere font-medium text-[var(--link,var(--primary))] underline",
           footnoteReference &&
             "inline-block whitespace-nowrap font-normal leading-none no-underline",
           footnoteBackref &&

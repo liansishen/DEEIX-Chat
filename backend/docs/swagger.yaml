@@ -6911,7 +6911,7 @@ definitions:
   PatchMeRequest:
     properties:
       appearancePreferences:
-        maxLength: 2048
+        maxLength: 16384
         type: string
       avatarURL:
         maxLength: 2048

@@ -18,12 +18,17 @@ import { useTheme } from "@/shared/components/theme-provider";
 
 export function AppearancePreferencesSync(): null {
   const { user, userStatus } = useAuthSession();
-  const { setPreset } = useTheme();
+  const { commitTheme, cancelPreviewDraft } = useTheme();
+  const currentUserIDRef = React.useRef<string>("");
   const syncedAppearanceRef = React.useRef<string>("");
 
   React.useEffect(() => {
-    if (userStatus !== "ready" || !user) {
+    if (userStatus === "loading") {
+      return;
+    }
+    if (!user) {
       syncedAppearanceRef.current = "";
+      currentUserIDRef.current = "";
       return;
     }
 
@@ -32,10 +37,16 @@ export function AppearancePreferencesSync(): null {
     if (syncKey === syncedAppearanceRef.current) {
       return;
     }
+
+    if (currentUserIDRef.current && currentUserIDRef.current !== user.publicID) {
+      // User switched account: exit active theme preview draft.
+      cancelPreviewDraft();
+    }
+    currentUserIDRef.current = user.publicID;
     syncedAppearanceRef.current = syncKey;
 
     const next = resolveAppearancePreferences(raw);
-    setPreset(next.preset);
+    commitTheme(next.preset, next.customTheme ?? null, true);
     if (next.chatFont !== readChatFontPreference()) {
       writeChatFontPreference(next.chatFont);
     }
@@ -45,7 +56,7 @@ export function AppearancePreferencesSync(): null {
     if (next.fontSize !== readFontSizePreference()) {
       writeFontSizePreference(next.fontSize);
     }
-  }, [setPreset, user, userStatus]);
+  }, [cancelPreviewDraft, commitTheme, user, userStatus]);
 
   return null;
 }

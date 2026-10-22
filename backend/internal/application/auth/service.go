@@ -824,51 +824,6 @@ func (s *Service) UpdateProfile(ctx context.Context, userID uint, input UpdatePr
 	return item, err
 }
 
-func normalizeAppearancePreferences(raw string) (string, error) {
-	if raw == "" {
-		return "", nil
-	}
-
-	var payload map[string]string
-	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
-		return "", ErrInvalidAppearancePreferences
-	}
-
-	normalized := make(map[string]string, len(payload))
-	for key, value := range payload {
-		switch key {
-		case "preset":
-			if value != "default" && value != "azure" && value != "cobalt" && value != "graphite" && value != "lagoon" && value != "ink" && value != "ochre" && value != "sepia" {
-				return "", ErrInvalidAppearancePreferences
-			}
-			normalized[key] = value
-		case "chatFont":
-			if value != "default" && value != "songti" && value != "heiti" && value != "mono" {
-				return "", ErrInvalidAppearancePreferences
-			}
-			normalized[key] = value
-		case "chatFontWeight":
-			if value != "regular" && value != "medium" && value != "semibold" && value != "bold" {
-				return "", ErrInvalidAppearancePreferences
-			}
-			normalized[key] = value
-		case "fontSize":
-			if value != "small" && value != "standard" && value != "medium" && value != "large" {
-				value = "standard"
-			}
-			normalized[key] = value
-		default:
-			return "", ErrInvalidAppearancePreferences
-		}
-	}
-
-	next, err := json.Marshal(normalized)
-	if err != nil {
-		return "", ErrInvalidAppearancePreferences
-	}
-	return string(next), nil
-}
-
 func normalizeLocale(raw string) (string, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {

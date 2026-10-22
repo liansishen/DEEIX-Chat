@@ -3069,7 +3069,7 @@ export interface PatchKnowledgeBaseRequest {
 }
 
 export interface PatchMeRequest {
-  /** @maxLength 2048 */
+  /** @maxLength 16384 */
   appearancePreferences?: string;
   /** @maxLength 2048 */
   avatarURL?: string;

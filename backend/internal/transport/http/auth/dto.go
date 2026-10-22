@@ -336,7 +336,7 @@ type PatchMeRequest struct {
 	Timezone              *string `json:"timezone,omitempty" binding:"omitempty,max=64"`
 	Locale                *string `json:"locale,omitempty" binding:"omitempty,max=16"`
 	ProfilePreferences    *string `json:"profilePreferences,omitempty" binding:"omitempty,max=1024"`
-	AppearancePreferences *string `json:"appearancePreferences,omitempty" binding:"omitempty,max=2048"`
+	AppearancePreferences *string `json:"appearancePreferences,omitempty" binding:"omitempty,max=16384"`
 }
 
 // PatchUsernameRequest 包含请求的用户名。

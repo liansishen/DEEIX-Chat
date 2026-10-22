@@ -1,5 +1,7 @@
 export { AppearancePreferencesProvider } from "@/features/settings/components/appearance-preferences-provider";
 export { AppearancePreferencesSync } from "@/features/settings/components/appearance-preferences-sync";
+export { ThemeEditorHost } from "@/features/settings/components/shared/theme-editor-host";
+export { dispatchOpenThemeEditor } from "@/features/settings/events/theme-editor-events";
 export { useSettingsChatPreferences } from "@/features/settings/hooks/use-settings-chat-preferences";
 
 // The exports below are the preference settings contract consumed by chat and other features.

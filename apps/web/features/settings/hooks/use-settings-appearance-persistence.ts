@@ -12,6 +12,7 @@ import {
 import { resolveLocalizedErrorMessage } from "@/i18n/resolve-error-message";
 import { patchMe } from "@/shared/api/auth";
 import { useAuthSession } from "@/shared/auth/auth-session-context";
+import { dispatchUserProfileUpdated } from "@/shared/auth/user-profile-events";
 
 export function useSettingsAppearancePersistence() {
   const t = useTranslations("settings");
@@ -46,12 +47,20 @@ export function useSettingsAppearancePersistence() {
           const pendingPatch = pendingAppearancePatchRef.current;
           pendingAppearancePatchRef.current = {};
           appearanceSaveTimerRef.current = null;
+          const baseLocal = readLocalAppearancePreferences();
+          const customTheme = pendingPatch.preset !== undefined
+            ? pendingPatch.customTheme
+            : pendingPatch.customTheme !== undefined
+              ? pendingPatch.customTheme
+              : baseLocal.customTheme;
           const appearancePreferences = serializeAppearancePreferences({
-            ...readLocalAppearancePreferences(),
+            ...baseLocal,
             ...pendingPatch,
+            customTheme,
           });
           try {
-            await patchMe(accessToken, { appearancePreferences });
+            const updatedUser = await patchMe(accessToken, { appearancePreferences });
+            dispatchUserProfileUpdated(updatedUser);
           } catch (error) {
             toast.error(t("generalPage.toast.saveProfileFailed"), {
               description: resolveLocalizedErrorMessage(error),

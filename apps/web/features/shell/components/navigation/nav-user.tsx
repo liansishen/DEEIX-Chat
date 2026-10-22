@@ -39,6 +39,7 @@ import { useShellUserMenuActions } from "@/features/shell/hooks/use-shell-user-m
 import { APP_LOCALE_LABELS, APP_LOCALES } from "@/i18n/config";
 import { dispatchOpenAnnouncements, getAnnouncementUnread, subscribeAnnouncementUnreadChanged } from "@/entities/announcement";
 import { FeatureGate } from "@/shared/capabilities";
+import { dispatchOpenThemeEditor } from "@/features/settings";
 
 export function NavUser({
   user,
@@ -51,6 +52,7 @@ export function NavUser({
   };
 }) {
   const t = useTranslations("common.navigation");
+  const tSettings = useTranslations("settings");
   const router = useRouter();
   const { locale, loggingOut, savingLocale, onLogout, onLocaleSelect } = useShellUserMenuActions();
   const [open, setOpen] = React.useState(false);
@@ -82,6 +84,13 @@ export function NavUser({
     skipTriggerFocusRef.current = true;
     setOpen(false);
     dispatchOpenAnnouncements();
+  }, []);
+
+  const openThemeEditorFromMenu = React.useCallback((event: Event) => {
+    event.preventDefault();
+    skipTriggerFocusRef.current = true;
+    setOpen(false);
+    dispatchOpenThemeEditor();
   }, []);
 
   return (
@@ -133,6 +142,9 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem onSelect={navigateFromMenu("/settings/general")}>
                 {t("settings")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={openThemeEditorFromMenu}>
+                {tSettings("generalPage.appearance.customizeTheme") || "Customize Theme"}
               </DropdownMenuItem>
               <FeatureGate feature="announcements">
                 <DropdownMenuItem onSelect={openAnnouncementsFromMenu}>

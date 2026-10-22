@@ -355,7 +355,7 @@ export function ChatMessageBot({
 
     return (
       <div className="flex justify-start">
-        <div className={cn("w-full rounded-lg bg-muted/40 p-3 text-foreground", contentWidthClassName)}>
+        <div className={cn("w-full rounded-lg bg-muted/40 p-3 text-[var(--chat-bot-foreground,var(--foreground))]", contentWidthClassName)}>
           <Textarea
             autoFocus
             value={editingValue}
@@ -428,7 +428,7 @@ export function ChatMessageBot({
 
       <div
         data-chat-assistant-content=""
-        className="w-full min-w-0 max-w-none overflow-hidden text-[15px] leading-8 text-foreground [overflow-wrap:anywhere]"
+        className="w-full min-w-0 max-w-none overflow-hidden rounded-xl bg-[var(--chat-bot-background)] text-[var(--chat-bot-foreground,var(--foreground))] text-[15px] leading-8 [overflow-wrap:anywhere]"
         style={{ fontFamily: "var(--font-chat)", fontWeight: "var(--font-chat-weight)" }}
       >
         {isImageGenerationLoading && !item.inlineAlert ? (

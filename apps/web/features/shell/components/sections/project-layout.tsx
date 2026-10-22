@@ -17,7 +17,7 @@ import { AppSidebar } from "@/features/shell/components/navigation/app-sidebar";
 import { MobileHeader } from "@/features/shell/components/sections/mobile-header";
 import { ShellConversationNavigationProvider } from "@/features/shell/context/shell-conversation-navigation-context";
 import { MobileHeaderActionProvider } from "@/features/shell/context/mobile-header-action-context";
-import { AppearancePreferencesSync } from "@/features/settings";
+import { AppearancePreferencesSync, ThemeEditorHost } from "@/features/settings";
 import { UserLocaleSync } from "@/i18n/user-locale-sync";
 import { FeatureGate } from "@/shared/capabilities";
 
@@ -92,6 +92,7 @@ export function ProjectLayout({
     <>
       <UserLocaleSync />
       <AppearancePreferencesSync />
+      <ThemeEditorHost />
       <InitialSecurityGuard />
       <FeatureGate feature="announcements">
         <AnnouncementDialogHost />

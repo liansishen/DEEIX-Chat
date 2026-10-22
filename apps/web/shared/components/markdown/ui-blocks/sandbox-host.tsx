@@ -192,7 +192,7 @@ export function SandboxFrame({ id, source, title, props, maxHeight = MAX_FRAME_H
     restore: (saved) => saved ?? NO_STATE,
     title,
   });
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, themeRevision } = useTheme();
   const frameRef = React.useRef<HTMLIFrameElement | null>(null);
   const [ready, setReady] = React.useState(false);
   const [unavailable, setUnavailable] = React.useState(false);
@@ -207,7 +207,7 @@ export function SandboxFrame({ id, source, title, props, maxHeight = MAX_FRAME_H
     const snapshot = captureHTMLVisualThemeSnapshot(resolvedTheme);
     setInitialTheme((current) => current ?? snapshot);
     setTheme(snapshot);
-  }, [resolvedTheme]);
+  }, [resolvedTheme, themeRevision]);
 
   const documentHTML = React.useMemo(
     () => (initialTheme ? sandboxDocument(source, initialTheme, widget) : ""),

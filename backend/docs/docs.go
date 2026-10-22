@@ -28044,7 +28044,7 @@ const docTemplate = `{
             "properties": {
                 "appearancePreferences": {
                     "type": "string",
-                    "maxLength": 2048
+                    "maxLength": 16384
                 },
                 "avatarURL": {
                     "type": "string",

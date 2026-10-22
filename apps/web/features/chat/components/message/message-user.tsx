@@ -306,7 +306,7 @@ export function ChatMessageUser({
         />
       ) : null}
       <div
-        className="chat-font-content min-w-0 max-w-[70%] overflow-hidden rounded-xl bg-muted/60 p-3 text-[15px] leading-6 text-foreground [overflow-wrap:anywhere] max-sm:max-w-[88%]"
+        className="chat-font-content min-w-0 max-w-[70%] overflow-hidden rounded-xl bg-[var(--chat-user-background)] p-3 text-[15px] leading-6 text-[var(--chat-user-foreground)] [overflow-wrap:anywhere] max-sm:max-w-[88%]"
         style={{ fontFamily: "var(--font-chat)", fontWeight: "var(--font-chat-weight)" }}
       >
         {item.content.trim() ? (
@@ -327,7 +327,7 @@ export function ChatMessageUser({
                   aria-hidden="true"
                   data-screenshot-exclude="true"
                   className={cn(
-                    "pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-[linear-gradient(to_bottom,transparent,color-mix(in_oklab,var(--muted)_60%,var(--background)))] transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+                    "pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-[linear-gradient(to_bottom,transparent,var(--chat-user-background))] transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
                     expanded ? "opacity-0" : "opacity-100",
                   )}
                 />

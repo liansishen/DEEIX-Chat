@@ -812,7 +812,7 @@ function ChatInputComponent({
       <InputGroup
         ref={inputGroupRef}
         className={cn(
-          "relative z-10 flex-col items-stretch overflow-hidden rounded-3xl border-[0.5px] border-border/70 bg-pure shadow-xs transition-[height,border-color,background-color,box-shadow] duration-150 ease-out motion-reduce:transition-none has-[[data-slot=input-group-control]:focus-visible]:border-border has-[[data-slot=input-group-control]:focus-visible]:ring-0",
+          "relative z-10 flex-col items-stretch overflow-hidden rounded-3xl border-[0.5px] border-[var(--chat-input-border,color-mix(in_oklch,var(--border)_70%,transparent))] bg-[var(--chat-input-background,var(--pure))] shadow-xs transition-[height,border-color,background-color,box-shadow] duration-150 ease-out motion-reduce:transition-none has-[[data-slot=input-group-control]:focus-visible]:border-border has-[[data-slot=input-group-control]:focus-visible]:ring-0",
           inputGroupHeight === null && "h-auto",
           temporaryMode && "border-foreground/15 bg-muted/45 shadow-none",
           dropActive && "border-dashed border-foreground/30 bg-muted/20 shadow-none",
@@ -1036,7 +1036,7 @@ function ChatInputComponent({
             aria-expanded={showMentionMenu ? true : undefined}
             style={{ fontFamily: "var(--font-chat)", fontWeight: "var(--font-chat-weight)" }}
             className={cn(
-              "rounded-3xl min-h-12 overflow-y-auto px-5 text-[15px] leading-6 placeholder:text-muted-foreground placeholder:font-[inherit] placeholder:leading-[inherit]",
+              "rounded-3xl min-h-12 overflow-y-auto px-5 text-[15px] leading-6 text-[var(--chat-input-foreground,var(--foreground))] placeholder:text-[var(--chat-input-placeholder,var(--muted-foreground))] placeholder:font-[inherit] placeholder:leading-[inherit]",
               showSelectedSkills || hasComposerAttachments ? "pt-2" : "pt-4",
               inputHeightClassName,
               speechInput.active ? "placeholder:font-normal placeholder:text-muted-foreground" : "",
@@ -1295,7 +1295,7 @@ function ChatInputComponent({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    className="size-7 rounded-md text-muted-foreground hover:text-foreground sm:size-8"
+                    className={cn("size-7 rounded-md text-muted-foreground hover:text-foreground sm:size-8", hasSubmitContent && "bg-[var(--chat-send-button-background)] text-[var(--chat-send-button-foreground)] hover:opacity-90")}
                     disabled={loading || uploading || (!sending && !hasSubmitContent && !speechInput.supported)}
                     onClick={hasSubmitContent ? onSendMessage : sending ? onStopMessage : speechInput.toggle}
                     onMouseEnter={() => setIsVoiceHovered(true)}

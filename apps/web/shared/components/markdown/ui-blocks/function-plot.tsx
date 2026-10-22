@@ -41,12 +41,9 @@ const DEFAULT_X: readonly [number, number] = [-5, 5];
 const SERIES_COLORS = [
   { stroke: "stroke-[var(--chart-1)]", dot: "bg-[var(--chart-1)]" },
   { stroke: "stroke-[var(--chart-2)]", dot: "bg-[var(--chart-2)]" },
-  { stroke: "stroke-emerald-600 dark:stroke-emerald-400", dot: "bg-emerald-600 dark:bg-emerald-400" },
-  { stroke: "stroke-sky-600 dark:stroke-sky-400", dot: "bg-sky-600 dark:bg-sky-400" },
-  { stroke: "stroke-amber-600 dark:stroke-amber-400", dot: "bg-amber-600 dark:bg-amber-400" },
-  { stroke: "stroke-pink-600 dark:stroke-pink-400", dot: "bg-pink-600 dark:bg-pink-400" },
-  { stroke: "stroke-violet-600 dark:stroke-violet-400", dot: "bg-violet-600 dark:bg-violet-400" },
-  { stroke: "stroke-teal-600 dark:stroke-teal-400", dot: "bg-teal-600 dark:bg-teal-400" },
+  { stroke: "stroke-[var(--chart-3)]", dot: "bg-[var(--chart-3)]" },
+  { stroke: "stroke-[var(--chart-4)]", dot: "bg-[var(--chart-4)]" },
+  { stroke: "stroke-[var(--chart-5)]", dot: "bg-[var(--chart-5)]" },
 ] as const;
 const EDGE_LABEL_GAP = 10;
 const ZOOM_STEP = 1.5;
