@@ -191,13 +191,13 @@ function ColorTokenRow({
   };
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-lg border border-neutral-800 bg-neutral-900/90 p-2.5 transition-colors hover:border-neutral-700">
+    <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-muted/40 p-2.5 transition-colors hover:border-ring/40">
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-col min-w-0">
-          <span className="text-xs font-medium text-neutral-100 truncate" title={tokenLabel}>
+          <span className="text-xs font-medium text-foreground truncate" title={tokenLabel}>
             {tokenLabel}
           </span>
-          <span className="font-mono text-[10px] text-neutral-500 truncate" title={tokenKey}>
+          <span className="font-mono text-[10px] text-muted-foreground truncate" title={tokenKey}>
             {tokenKey}
           </span>
         </div>
@@ -208,12 +208,12 @@ function ColorTokenRow({
               onClick={onReset}
               title={t("generalPage.appearance.themeResetToken")}
               aria-label={t("generalPage.appearance.themeResetToken")}
-              className="inline-flex size-5 items-center justify-center rounded text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors"
+              className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <RotateCcw className="size-3" />
             </button>
           ) : (
-            <span className="text-[10px] text-neutral-500">
+            <span className="text-[10px] text-muted-foreground">
               {t("generalPage.appearance.themePresetDefault")}
             </span>
           )}
@@ -224,7 +224,7 @@ function ColorTokenRow({
         <button
           type="button"
           onClick={() => colorInputRef.current?.click()}
-          className="size-7 shrink-0 rounded-md border border-neutral-700 shadow-xs cursor-pointer overflow-hidden transition-transform hover:scale-105"
+          className="size-7 shrink-0 rounded-md border border-input/60 shadow-xs cursor-pointer overflow-hidden transition-transform hover:scale-105"
           style={{ backgroundColor: effectiveHex }}
           aria-label={t("generalPage.appearance.tokenColorPicker", { token: tokenLabel })}
         >
@@ -246,12 +246,12 @@ function ColorTokenRow({
           onChange={handleHexInputChange}
           onBlur={handleHexBlur}
           aria-label={t("generalPage.appearance.tokenHexInput", { token: tokenLabel })}
-          className="h-7 min-w-0 flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 font-mono text-xs text-neutral-200 placeholder:text-neutral-600 outline-none focus:border-neutral-500"
+          className="h-7 min-w-0 flex-1 rounded-md border border-input/60 bg-background px-2 font-mono text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring/60"
         />
 
         {allowAlpha ? (
           <div className="flex items-center gap-1 shrink-0">
-            <span className="text-[10px] text-neutral-400">A:</span>
+            <span className="text-[10px] text-muted-foreground">A:</span>
             <input
               type="number"
               min={0}
@@ -259,10 +259,10 @@ function ColorTokenRow({
               value={alphaPercent}
               onChange={handleAlphaChange}
               aria-label={t("generalPage.appearance.tokenAlphaInput", { token: tokenLabel })}
-              className="h-7 w-12 rounded-md border border-neutral-700 bg-neutral-950 px-1 text-center font-mono text-xs text-neutral-200 outline-none focus:border-neutral-500"
+              className="h-7 w-12 rounded-md border border-input/60 bg-background px-1 text-center font-mono text-xs text-foreground outline-none focus:border-ring/60"
               title="Alpha %"
             />
-            <span className="text-[10px] text-neutral-400">%</span>
+            <span className="text-[10px] text-muted-foreground">%</span>
           </div>
         ) : null}
       </div>
@@ -278,6 +278,7 @@ export function ThemeEditorSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("settings");
+  const tCommon = useTranslations("common.actions");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = React.useState(false);
   const [confirmPresetChangePreset, setConfirmPresetChangePreset] = React.useState<ThemePreset | null>(null);
@@ -399,16 +400,16 @@ export function ThemeEditorSheet({
           showOverlay={false}
           onInteractOutside={(e) => e.preventDefault()}
           onPointerDownOutside={(e) => e.preventDefault()}
-          className="flex w-full flex-col p-0 sm:max-w-md md:max-w-lg lg:max-w-xl z-40 bg-neutral-950 text-neutral-100 shadow-2xl border-l border-neutral-800 [&>button]:text-neutral-400 [&>button]:hover:text-neutral-100"
+          className="flex w-full flex-col p-0 sm:max-w-md md:max-w-lg lg:max-w-xl z-40 bg-popover text-popover-foreground shadow-2xl border-l border-border [&>button]:text-muted-foreground [&>button]:hover:text-foreground"
         >
           {/* Header */}
-          <SheetHeader className="border-b border-neutral-800 p-4 pb-3">
+          <SheetHeader className="border-b border-border p-4 pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <SheetTitle className="text-base font-semibold text-neutral-100">
+                <SheetTitle className="text-base font-semibold text-foreground">
                   {t("generalPage.appearance.customizeTheme")}
                 </SheetTitle>
-                <SheetDescription className="text-xs text-neutral-400">
+                <SheetDescription className="text-xs text-muted-foreground">
                   {t("generalPage.appearance.customizeThemeDescription")}
                 </SheetDescription>
               </div>
@@ -416,15 +417,15 @@ export function ThemeEditorSheet({
 
             {/* Mode & Preset controls */}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex rounded-lg bg-neutral-900 p-0.5 border border-neutral-800">
+              <div className="flex rounded-lg bg-muted/60 p-0.5 border border-border">
                 <button
                   type="button"
                   onClick={() => setActiveMode("light")}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors",
                     activeMode === "light"
-                      ? "bg-neutral-800 text-neutral-100 shadow-xs"
-                      : "text-neutral-400 hover:text-neutral-200",
+                      ? "bg-background text-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <Sun className="size-3.5" />
@@ -436,8 +437,8 @@ export function ThemeEditorSheet({
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors",
                     activeMode === "dark"
-                      ? "bg-neutral-800 text-neutral-100 shadow-xs"
-                      : "text-neutral-400 hover:text-neutral-200",
+                      ? "bg-background text-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <Moon className="size-3.5" />
@@ -446,13 +447,13 @@ export function ThemeEditorSheet({
               </div>
 
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-neutral-400 whitespace-nowrap">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {t("generalPage.appearance.themePreset")}:
                 </span>
                 <select
                   value={preset}
                   onChange={(e) => handlePresetSelect(e.target.value)}
-                  className="h-8 rounded-md border border-neutral-800 bg-neutral-900 px-2 text-xs text-neutral-200 outline-none focus:border-neutral-600"
+                  className="h-8 rounded-md border border-input/60 bg-background px-2 text-xs text-foreground outline-none focus:border-ring/60"
                 >
                   {THEME_PRESET_ITEMS.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -469,7 +470,7 @@ export function ThemeEditorSheet({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-800 hover:text-neutral-100"
+                  className="inline-flex items-center gap-1 rounded-md border border-border bg-transparent px-2.5 py-1 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
                 >
                   <Upload className="size-3" />
                   {t("generalPage.appearance.themeImport")}
@@ -485,7 +486,7 @@ export function ThemeEditorSheet({
                 <button
                   type="button"
                   onClick={handleExport}
-                  className="inline-flex items-center gap-1 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-800 hover:text-neutral-100"
+                  className="inline-flex items-center gap-1 rounded-md border border-border bg-transparent px-2.5 py-1 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
                 >
                   <Download className="size-3" />
                   {t("generalPage.appearance.themeExport")}
@@ -495,20 +496,20 @@ export function ThemeEditorSheet({
               <button
                 type="button"
                 onClick={resetCurrentMode}
-                className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 {t("generalPage.appearance.themeResetMode")}
               </button>
             </div>
 
             {/* Mini Component Preview Widget */}
-            <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
+            <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-medium text-neutral-400">
+                <span className="text-[11px] font-medium text-muted-foreground">
                   {t("generalPage.appearance.miniPreview")}
                 </span>
                 {isContrastLow ? (
-                  <span className="flex items-center gap-1 text-[10px] text-amber-400" title={t("generalPage.appearance.contrastWarning")}>
+                  <span className="flex items-center gap-1 text-[10px] text-warning" title={t("generalPage.appearance.contrastWarning")}>
                     <AlertTriangle className="size-3" />
                     <span>{contrast.toFixed(1)}:1</span>
                   </span>
@@ -560,13 +561,13 @@ export function ThemeEditorSheet({
 
             {/* Search Filter */}
             <div className="relative mt-2.5">
-              <Search className="absolute left-2.5 top-2 size-3.5 text-neutral-500" />
+              <Search className="absolute left-2.5 top-2 size-3.5 text-muted-foreground" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("generalPage.appearance.searchTokens")}
-                className="h-7.5 w-full rounded-md border border-neutral-800 bg-neutral-900 pl-8 pr-2.5 text-xs text-neutral-200 placeholder:text-neutral-500 outline-none focus:border-neutral-600"
+                className="h-7.5 w-full rounded-md border border-input/60 bg-background pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring/60"
               />
             </div>
           </SheetHeader>
@@ -600,7 +601,7 @@ export function ThemeEditorSheet({
                 {/* 1. Common Tokens */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-semibold text-neutral-200 tracking-wide uppercase">
+                    <h4 className="text-xs font-semibold text-foreground tracking-wide uppercase">
                       {t("generalPage.appearance.commonColors")}
                     </h4>
                   </div>
@@ -624,11 +625,11 @@ export function ThemeEditorSheet({
                 </div>
 
                 {/* 2. Advanced Accordion */}
-                <div className="border-t border-neutral-800 pt-3">
+                <div className="border-t border-border pt-3">
                   <button
                     type="button"
                     onClick={() => setShowAdvanced((v) => !v)}
-                    className="flex w-full items-center justify-between py-1 text-xs font-medium text-neutral-400 hover:text-neutral-200"
+                    className="flex w-full items-center justify-between py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
                   >
                     <span>{t("generalPage.appearance.advancedColors")}</span>
                     {showAdvanced ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
@@ -644,7 +645,7 @@ export function ThemeEditorSheet({
 
                         return (
                           <div key={group} className="space-y-2.5">
-                            <h4 className="text-xs font-semibold text-neutral-300 tracking-wide uppercase">
+                            <h4 className="text-xs font-semibold text-foreground tracking-wide uppercase">
                               {t(`generalPage.appearance.themeGroup.${group}`)}
                             </h4>
                             <div className="grid grid-cols-1 gap-2">
@@ -671,10 +672,10 @@ export function ThemeEditorSheet({
           </div>
 
           {/* Fixed Footer */}
-          <div className="border-t border-neutral-800 bg-neutral-950 p-3.5 flex items-center justify-between gap-3">
-            <div className="text-xs text-neutral-400 truncate">
+          <div className="border-t border-border bg-popover p-3.5 flex items-center justify-between gap-3">
+            <div className="text-xs text-muted-foreground truncate">
               {isDirty ? (
-                <span className="text-amber-400 font-medium">
+                <span className="text-warning font-medium">
                   ● {t("generalPage.appearance.themeUnsaved")}
                 </span>
               ) : (
@@ -687,17 +688,17 @@ export function ThemeEditorSheet({
                 type="button"
                 onClick={handleRequestClose}
                 disabled={isSaving}
-                className="rounded-md border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100 disabled:opacity-50"
+                className="rounded-md border border-border bg-transparent px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
               >
-                {t("common.actions.cancel")}
+                {tCommon("cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => void saveTheme()}
                 disabled={isSaving || !isDirty}
-                className="rounded-md bg-neutral-100 px-3.5 py-1.5 text-xs font-medium text-neutral-950 hover:bg-white disabled:opacity-50 transition-colors"
+                className="rounded-md bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
-                {isSaving ? t("common.actions.saving") : t("common.actions.save")}
+                {isSaving ? tCommon("saving") : tCommon("save")}
               </button>
             </div>
           </div>
@@ -706,24 +707,24 @@ export function ThemeEditorSheet({
 
       {/* Discard Confirmation Dialog */}
       <AlertDialog open={confirmDiscardOpen} onOpenChange={setConfirmDiscardOpen}>
-        <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-neutral-100 shadow-2xl">
+        <AlertDialogContent className="bg-popover border-border text-popover-foreground shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-neutral-100">
+            <AlertDialogTitle className="text-foreground">
               {t("generalPage.appearance.discardTitle")}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-neutral-400">
+            <AlertDialogDescription className="text-muted-foreground">
               {t("generalPage.appearance.discardDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-neutral-800 border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:text-white">
-              {t("common.actions.cancel")}
+            <AlertDialogCancel variant="outline">
+              {tCommon("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDiscard}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {t("common.actions.discard")}
+              {t("generalPage.appearance.discardAction")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -734,27 +735,27 @@ export function ThemeEditorSheet({
         open={confirmPresetChangePreset !== null}
         onOpenChange={(open) => !open && setConfirmPresetChangePreset(null)}
       >
-        <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-neutral-100 shadow-2xl">
+        <AlertDialogContent className="bg-popover border-border text-popover-foreground shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-neutral-100">
+            <AlertDialogTitle className="text-foreground">
               {t("generalPage.appearance.switchPresetTitle")}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-neutral-400">
+            <AlertDialogDescription className="text-muted-foreground">
               {t("generalPage.appearance.switchPresetDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel
+              variant="outline"
               onClick={() => setConfirmPresetChangePreset(null)}
-              className="bg-neutral-800 border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:text-white"
             >
-              {t("common.actions.cancel")}
+              {tCommon("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmPresetSwitch}
-              className="bg-neutral-100 text-neutral-900 hover:bg-white"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              {t("common.actions.confirm")}
+              {tCommon("confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

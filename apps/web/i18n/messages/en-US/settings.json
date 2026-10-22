@@ -134,6 +134,7 @@
       "themeExternalUpdatedToast": "Saved theme was updated; current draft preserved",
       "discardTitle": "Discard unsaved changes?",
       "discardDescription": "You have unsaved color customizations. Discarding will revert to your last saved theme.",
+      "discardAction": "Discard changes",
       "switchPresetTitle": "Switch base preset?",
       "switchPresetDescription": "Switching presets will clear your current custom overrides so you can start customizing the new preset.",
       "tokenColorPicker": "{token} color picker",

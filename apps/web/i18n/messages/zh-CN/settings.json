@@ -134,6 +134,7 @@
       "themeExternalUpdatedToast": "已保存主题已更新，当前草稿已保留",
       "discardTitle": "放弃未保存的修改？",
       "discardDescription": "你有未保存的主题颜色定制。放弃将恢复到上次保存的主题。",
+      "discardAction": "放弃修改",
       "switchPresetTitle": "切换基底预设？",
       "switchPresetDescription": "切换基底预设将清空已有的颜色覆盖，以便以新预设为基础进行定制。",
       "tokenColorPicker": "{token} 取色器",
