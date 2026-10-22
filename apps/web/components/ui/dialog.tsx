@@ -1,7 +1,7 @@
 "use client"
 
-import * as React from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
+import * as React from "react"
 
 import { HeightTransition } from "@/components/ui/height-transition"
 import { cn } from "@/lib/utils"
@@ -187,13 +187,13 @@ function DialogCollapsible({
 
 export {
   Dialog,
-  DialogCollapsible,
   DialogClose,
+  DialogCollapsible,
   DialogContent,
   DialogDescription,
   DialogFooter,
-  DialogHeightTransition,
   DialogHeader,
+  DialogHeightTransition,
   DialogOverlay,
   DialogPortal,
   DialogTitle,

@@ -4,7 +4,7 @@
  */
 
 .data-table-header {
-  --data-table-header-bg: var(--accent);
+  --data-table-header-bg: var(--table-header-background, var(--accent));
   background-color: var(--data-table-header-bg);
   box-shadow: 0 -1px 0 0 var(--data-table-header-bg);
 }
@@ -20,7 +20,7 @@
 
 tbody .data-table-row {
   --data-table-row-bg: var(--background);
-  --data-table-row-hover-bg: var(--accent);
+  --data-table-row-hover-bg: var(--table-row-hover, var(--accent));
   background-color: var(--data-table-row-bg);
 }
 

@@ -1,11 +1,10 @@
 "use client"
 
-import type * as React from "react"
 import { ScrollArea as ScrollAreaPrimitive } from "radix-ui"
-
-import { cn } from "@/lib/utils"
+import type * as React from "react"
 import { Spinner, SpinnerLabel } from "@/components/ui/spinner"
 import { useTableViewportHeight } from "@/components/ui/use-table-viewport-height"
+import { cn } from "@/lib/utils"
 
 type TableBodyProps = React.ComponentProps<"tbody">
 
@@ -85,7 +84,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("data-table-header bg-table-header-background [--data-table-header-bg:var(--table-header-background)]", className)}
+      className={cn("data-table-header", className)}
       {...props}
     />
   )
@@ -137,7 +136,7 @@ function TableRow({
     <tr
       data-slot="table-row"
       className={cn(
-        "data-table-row border-b border-border/60 hover:bg-table-row-hover [--data-table-row-hover-bg:var(--table-row-hover)] last:border-b-0",
+        "data-table-row border-b border-border/60 last:border-b-0",
         className
       )}
       data-interactive={interactive === false ? "false" : dataInteractive}
@@ -264,13 +263,13 @@ function TableLoadingRow({
 
 export {
   Table,
-  TableHeader,
   TableBody,
+  TableCaption,
+  TableCell,
+  TableEmptyRow,
   TableFooter,
   TableHead,
-  TableRow,
-  TableCell,
-  TableCaption,
-  TableEmptyRow,
+  TableHeader,
   TableLoadingRow,
+  TableRow,
 }
