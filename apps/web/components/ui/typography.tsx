@@ -47,7 +47,7 @@ export function TypographyOrderedList({ className, ...props }: React.ComponentPr
 export function TypographyInlineCode({ className, ...props }: React.ComponentPropsWithoutRef<"code">) {
   return (
     <code
-      className={cn("relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold", className)}
+      className={cn("relative rounded bg-inline-code-background text-inline-code-foreground px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold", className)}
       {...props}
     />
   );
@@ -93,14 +93,14 @@ export function TypographyCodeBlock({
   language?: string;
 }) {
   return (
-    <div className="my-6 overflow-hidden rounded-2xl border border-border/70 bg-card/75">
+    <div className="my-6 overflow-hidden rounded-2xl border border-border/70 bg-code-background">
       {language ? (
         <div className="border-b border-border/70 px-4 py-2 font-mono text-xs text-muted-foreground">
           {language}
         </div>
       ) : null}
       <pre
-        className={cn("overflow-x-auto px-4 py-4 font-mono text-[13px] leading-6 text-foreground", className)}
+        className={cn("overflow-x-auto px-4 py-4 font-mono text-[13px] leading-6 text-code-foreground", className)}
         {...props}
       >
         {children}

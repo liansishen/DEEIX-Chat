@@ -293,13 +293,13 @@ export function resolveExtractStatusLabel(extractStatus: string | null | undefin
 export function resolveFileProcessingToneClass(tone: FileProcessingBadge["tone"]): string {
   switch (tone) {
     case "success":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      return "border-success/30 bg-success-muted text-success-foreground";
     case "info":
-      return "border-sky-200 bg-sky-50 text-sky-700";
+      return "border-info/30 bg-info-muted text-info-foreground";
     case "warning":
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-warning/30 bg-warning-muted text-warning-foreground";
     case "danger":
-      return "border-rose-200 bg-rose-50 text-rose-700";
+      return "border-destructive/30 bg-destructive/10 text-destructive";
     default:
       return "border-border bg-muted/60 text-muted-foreground";
   }

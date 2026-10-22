@@ -85,7 +85,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("data-table-header", className)}
+      className={cn("data-table-header bg-table-header-background [--data-table-header-bg:var(--table-header-background)]", className)}
       {...props}
     />
   )
@@ -137,7 +137,7 @@ function TableRow({
     <tr
       data-slot="table-row"
       className={cn(
-        "data-table-row border-b border-border/60 last:border-b-0",
+        "data-table-row border-b border-border/60 hover:bg-table-row-hover [--data-table-row-hover-bg:var(--table-row-hover)] last:border-b-0",
         className
       )}
       data-interactive={interactive === false ? "false" : dataInteractive}

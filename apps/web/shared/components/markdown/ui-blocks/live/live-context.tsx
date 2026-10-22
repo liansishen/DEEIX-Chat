@@ -129,10 +129,10 @@ export const LIVE_TONES: readonly LiveTone[] = ["default", "muted", "positive", 
 export const TONE_TEXT_CLASS: Record<LiveTone, string> = {
   default: "text-foreground",
   muted: "text-muted-foreground",
-  positive: "text-green-600 dark:text-green-400",
-  negative: "text-red-600 dark:text-red-400",
-  warning: "text-amber-600 dark:text-amber-400",
-  info: "text-sky-600 dark:text-sky-400",
+  positive: "text-success",
+  negative: "text-destructive",
+  warning: "text-warning",
+  info: "text-info",
 };
 
 // A pill toggle, shared by tabs and segmented controls.

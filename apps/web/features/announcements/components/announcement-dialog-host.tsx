@@ -61,13 +61,13 @@ function formatAnnouncementTime(value: string, locale: string): string {
 function announcementTypeAccentClassName(value: string): string {
   switch (normalizeAnnouncementType(value)) {
     case "critical":
-      return "before:bg-red-500 dark:before:bg-red-400";
+      return "before:bg-destructive";
     case "warning":
-      return "before:bg-yellow-500 dark:before:bg-yellow-400";
+      return "before:bg-warning";
     case "info":
-      return "before:bg-blue-500 dark:before:bg-blue-400";
+      return "before:bg-info";
     case "normal":
-      return "before:bg-emerald-500 dark:before:bg-emerald-400";
+      return "before:bg-success";
     default:
       return "before:bg-border";
   }
@@ -137,7 +137,7 @@ export function AnnouncementDialogHost() {
                     onClick={() => setActiveIndex(index)}
                   >
                     <span className="absolute right-1.5 top-1.5 flex h-3.5 items-center gap-1">
-                      {!isAnnouncementRead(item) ? <span aria-hidden="true" className="size-1.5 rounded-full bg-red-500" /> : null}
+                      {!isAnnouncementRead(item) ? <span aria-hidden="true" className="size-1.5 rounded-full bg-destructive" /> : null}
                       {item.pinned ? <Pin className="size-3 text-muted-foreground/70" /> : null}
                     </span>
                     <span className="block truncate font-medium">{item.title}</span>

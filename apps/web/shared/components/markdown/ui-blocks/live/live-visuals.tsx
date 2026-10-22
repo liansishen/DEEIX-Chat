@@ -70,34 +70,34 @@ const LABEL_MAX_LENGTH = 40;
 const TONE_STROKE: Record<LiveTone, string> = {
   default: "stroke-foreground/55",
   muted: "stroke-muted-foreground/40",
-  positive: "stroke-emerald-500/85 dark:stroke-emerald-400/85",
-  negative: "stroke-rose-500/85 dark:stroke-rose-400/85",
-  warning: "stroke-amber-500/85 dark:stroke-amber-400/85",
-  info: "stroke-sky-500/85 dark:stroke-sky-400/85",
+  positive: "stroke-success",
+  negative: "stroke-destructive",
+  warning: "stroke-warning",
+  info: "stroke-info",
 };
 const TONE_FILL: Record<LiveTone, string> = {
   default: "fill-foreground/[0.04]",
   muted: "fill-muted/60",
-  positive: "fill-emerald-500/10",
-  negative: "fill-rose-500/10",
-  warning: "fill-amber-500/10",
-  info: "fill-sky-500/10",
+  positive: "fill-success-muted",
+  negative: "fill-destructive/10",
+  warning: "fill-warning-muted",
+  info: "fill-info-muted",
 };
 const TONE_TEXT: Record<LiveTone, string> = {
   default: "fill-foreground/80",
   muted: "fill-muted-foreground",
-  positive: "fill-emerald-700 dark:fill-emerald-300",
-  negative: "fill-rose-700 dark:fill-rose-300",
-  warning: "fill-amber-700 dark:fill-amber-300",
-  info: "fill-sky-700 dark:fill-sky-300",
+  positive: "fill-success-foreground",
+  negative: "fill-destructive",
+  warning: "fill-warning-foreground",
+  info: "fill-info-foreground",
 };
 const TONE_MARKER: Record<LiveTone, string> = {
   default: "fill-foreground/55",
   muted: "fill-muted-foreground/40",
-  positive: "fill-emerald-500/85 dark:fill-emerald-400/85",
-  negative: "fill-rose-500/85 dark:fill-rose-400/85",
-  warning: "fill-amber-500/85 dark:fill-amber-400/85",
-  info: "fill-sky-500/85 dark:fill-sky-400/85",
+  positive: "fill-success",
+  negative: "fill-destructive",
+  warning: "fill-warning",
+  info: "fill-info",
 };
 
 const LABEL_SIZE = 12;

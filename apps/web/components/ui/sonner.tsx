@@ -22,10 +22,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
       position={position}
       className="toaster group"
       icons={{
-        success: <CircleCheckIcon className="size-4" />,
-        info: <InfoIcon className="size-4" />,
-        warning: <TriangleAlertIcon className="size-4" />,
-        error: <OctagonXIcon className="size-4" />,
+        success: <CircleCheckIcon className="size-4 text-success" />,
+        info: <InfoIcon className="size-4 text-info" />,
+        warning: <TriangleAlertIcon className="size-4 text-warning" />,
+        error: <OctagonXIcon className="size-4 text-destructive" />,
         loading: <Loader2Icon className="size-4 animate-spin" />,
       }}
       style={
@@ -34,6 +34,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius)",
+          "--success-bg": "var(--success-muted)",
+          "--success-text": "var(--success-foreground)",
+          "--success-border": "var(--success)",
+          "--warning-bg": "var(--warning-muted)",
+          "--warning-text": "var(--warning-foreground)",
+          "--warning-border": "var(--warning)",
+          "--info-bg": "var(--info-muted)",
+          "--info-text": "var(--info-foreground)",
+          "--info-border": "var(--info)",
         }
       }
       {...props}

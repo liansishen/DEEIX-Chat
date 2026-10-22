@@ -172,7 +172,7 @@ function LineText({ row }: { row: Row }) {
   return (
     <>
       {row.segments.map((segment, index) => (
-        <span key={`${index}-${segment.text.length}`} className={cn(segment.changed && (row.kind === "added" ? "rounded-sm bg-green-500/25" : "rounded-sm bg-red-500/25"))}>
+        <span key={`${index}-${segment.text.length}`} className={cn(segment.changed && (row.kind === "added" ? "rounded-sm bg-success/25" : "rounded-sm bg-destructive/25"))}>
           {segment.text}
         </span>
       ))}
@@ -223,8 +223,8 @@ function Diff({ id, props }: UIBlockRenderProps<DiffProps>) {
 
   const rowClass = (kind: DiffLine["kind"] | undefined, hunk: number | undefined) =>
     cn(
-      kind === "added" && "bg-green-500/10 text-green-900 dark:text-green-200",
-      kind === "removed" && "bg-red-500/10 text-red-900 dark:text-red-200",
+      kind === "added" && "bg-success-muted/50 text-success-foreground",
+      kind === "removed" && "bg-destructive/10 text-destructive",
       hunk !== undefined && hunk === activeHunk && "shadow-[inset_2px_0_0_var(--primary)]",
     );
   const numberClass = "w-10 min-w-10 select-none whitespace-nowrap border-r-[0.5px] border-border px-2 text-right text-[11px] text-muted-foreground/70 tabular-nums";
@@ -237,8 +237,8 @@ function Diff({ id, props }: UIBlockRenderProps<DiffProps>) {
           {props.title ? <h3 className="truncate text-lg font-semibold leading-7">{props.title}</h3> : null}
           <p className="text-[11px] text-muted-foreground">
             {props.beforeLabel ?? t("diffBefore")} → {props.afterLabel ?? t("diffAfter")}
-            <span className="ml-2 text-green-600 dark:text-green-400">+{stats.added}</span>
-            <span className="ml-1 text-red-600 dark:text-red-400">−{stats.removed}</span>
+            <span className="ml-2 text-success">+{stats.added}</span>
+            <span className="ml-1 text-destructive">−{stats.removed}</span>
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -264,7 +264,7 @@ function Diff({ id, props }: UIBlockRenderProps<DiffProps>) {
             {split ? <Rows3 className="size-3.5" strokeWidth={1.8} /> : <Columns2 className="size-3.5" strokeWidth={1.8} />}
           </button>
           <button type="button" aria-label={t("diffCopyAfter")} title={t("diffCopyAfter")} onClick={copyAfter} className={iconButton}>
-            {copied ? <Check className="size-3.5 text-green-600 dark:text-green-400" strokeWidth={2} /> : <Copy className="size-3.5" strokeWidth={1.8} />}
+            {copied ? <Check className="size-3.5 text-success" strokeWidth={2} /> : <Copy className="size-3.5" strokeWidth={1.8} />}
           </button>
         </div>
       </div>
@@ -276,7 +276,7 @@ function Diff({ id, props }: UIBlockRenderProps<DiffProps>) {
               ? splitRows.map((row, index) =>
                   row.kind === "gap" ? (
                     <tr key={`${id}-gap-${index}`}>
-                      <td colSpan={4} className="bg-muted/40 px-4 py-1 text-center text-[11px] text-muted-foreground">
+                      <td colSpan={4} className="bg-code-background px-4 py-1 text-center text-[11px] text-muted-foreground">
                         {t("diffHidden", { count: row.count })}
                       </td>
                     </tr>
@@ -292,7 +292,7 @@ function Diff({ id, props }: UIBlockRenderProps<DiffProps>) {
               : rows.map((row, index) =>
                   row.kind === "gap" ? (
                     <tr key={`${id}-gap-${index}`}>
-                      <td colSpan={3} className="bg-muted/40 px-4 py-1 text-center text-[11px] text-muted-foreground">
+                      <td colSpan={3} className="bg-code-background px-4 py-1 text-center text-[11px] text-muted-foreground">
                         {t("diffHidden", { count: row.count })}
                       </td>
                     </tr>

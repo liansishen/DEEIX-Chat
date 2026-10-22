@@ -25,18 +25,18 @@ type Tone = (typeof TONES)[number];
 
 // Same tints as the live block's badge.
 const TONE_BADGE: Record<Tone, string> = {
-  positive: "bg-green-600/10 text-green-700 dark:text-green-400",
-  negative: "bg-red-600/10 text-red-700 dark:text-red-400",
+  positive: "bg-success-muted text-success-foreground",
+  negative: "bg-destructive/10 text-destructive",
   neutral: "bg-muted text-muted-foreground",
 };
 const TONE_STROKE: Record<Tone, string> = {
-  positive: "stroke-green-600 dark:stroke-green-400",
-  negative: "stroke-red-600 dark:stroke-red-400",
+  positive: "stroke-success",
+  negative: "stroke-destructive",
   neutral: "stroke-foreground/60",
 };
 const TONE_FILL: Record<Tone, string> = {
-  positive: "fill-green-600 dark:fill-green-400",
-  negative: "fill-red-600 dark:fill-red-400",
+  positive: "fill-success",
+  negative: "fill-destructive",
   neutral: "fill-foreground/60",
 };
 

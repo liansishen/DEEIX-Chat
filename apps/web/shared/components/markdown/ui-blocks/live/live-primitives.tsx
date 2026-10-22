@@ -276,10 +276,10 @@ function formatFixed(value: number, precision: number): string {
 const BADGE_TONE_CLASS: Record<LiveTone, string> = {
   default: "border-border bg-muted text-foreground",
   muted: "border-border text-muted-foreground",
-  positive: "border-green-600/30 bg-green-600/10 text-green-700 dark:text-green-400",
-  negative: "border-red-600/30 bg-red-600/10 text-red-700 dark:text-red-400",
-  warning: "border-amber-600/30 bg-amber-600/10 text-amber-700 dark:text-amber-400",
-  info: "border-sky-600/30 bg-sky-600/10 text-sky-700 dark:text-sky-400",
+  positive: "border-success/30 bg-success-muted text-success-foreground",
+  negative: "border-destructive/30 bg-destructive/10 text-destructive",
+  warning: "border-warning/30 bg-warning-muted text-warning-foreground",
+  info: "border-info/30 bg-info-muted text-info-foreground",
 };
 
 function LiveBadge({ node }: { node: ResolvedNode }) {
@@ -313,10 +313,10 @@ function LiveProgress({ node }: { node: ResolvedNode }) {
 
 const CALLOUT_TONES = ["info", "positive", "warning", "negative"] as const;
 const CALLOUT_CLASS: Record<(typeof CALLOUT_TONES)[number], string> = {
-  info: "border-sky-600/25 bg-sky-600/5",
-  positive: "border-green-600/25 bg-green-600/5",
-  warning: "border-amber-600/25 bg-amber-600/5",
-  negative: "border-red-600/25 bg-red-600/5",
+  info: "border-info/25 bg-info-muted/30",
+  positive: "border-success/25 bg-success-muted/30",
+  warning: "border-warning/25 bg-warning-muted/30",
+  negative: "border-destructive/25 bg-destructive/5",
 };
 
 function LiveCallout({ node }: { node: ResolvedNode }) {
