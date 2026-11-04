@@ -4,10 +4,13 @@ import { cjk } from "@streamdown/cjk";
 import { createMathPlugin, type MathPlugin } from "@streamdown/math";
 import { useTranslations } from "next-intl";
 import * as React from "react";
+import remarkCjkStrikethrough from "remark-cjk-friendly-gfm-strikethrough";
+import remarkGfm from "remark-gfm";
 import {
   type AllowedTags,
   type Components,
   defaultRehypePlugins,
+  defaultRemarkPlugins,
   type IconMap,
   type PluginConfig,
   Streamdown,
@@ -117,8 +120,19 @@ type StreamdownFeatureFlags = {
   mermaid: boolean;
 };
 
+// Require double tildes for strikethrough in both the GFM and CJK parsers.
+const STREAMDOWN_REMARK_PLUGINS: NonNullable<StreamdownProps["remarkPlugins"]> = Object.entries(defaultRemarkPlugins).map(
+  ([name, plugin]) => name === "gfm" ? [remarkGfm, { singleTilde: false }] : plugin,
+);
+const STREAMDOWN_CJK_PLUGIN = {
+  ...cjk,
+  remarkPluginsAfter: cjk.remarkPluginsAfter.map(
+    (plugin) => plugin === remarkCjkStrikethrough ? [remarkCjkStrikethrough, { singleTilde: false }] : plugin,
+  ),
+} satisfies NonNullable<PluginConfig["cjk"]>;
+
 const BASE_STREAMDOWN_PLUGINS: PluginConfig = {
-  cjk,
+  cjk: STREAMDOWN_CJK_PLUGIN,
 };
 const STREAMDOWN_MATH_PLUGIN = (() => {
   const plugin = createMathPlugin({
@@ -676,6 +690,7 @@ function ThinkingSegmentBlock({
               controls={STREAMDOWN_CONTROLS}
               icons={icons}
               plugins={plugins}
+              remarkPlugins={STREAMDOWN_REMARK_PLUGINS}
               rehypePlugins={STREAMDOWN_REHYPE_PLUGINS}
               remend={STREAMDOWN_REMEND}
               mermaid={STREAMDOWN_MERMAID_OPTIONS}
@@ -717,6 +732,7 @@ function HTMLInlineMarkdownProvider({
           components={components}
           controls={false}
           plugins={plugins}
+          remarkPlugins={STREAMDOWN_REMARK_PLUGINS}
           rehypePlugins={STREAMDOWN_REHYPE_PLUGINS}
           remend={STREAMDOWN_REMEND}
           mermaid={STREAMDOWN_MERMAID_OPTIONS}
@@ -865,6 +881,7 @@ export const StreamdownRender = React.memo(function StreamdownRender({
                       controls={STREAMDOWN_CONTROLS}
                       icons={icons}
                       plugins={plugins}
+                      remarkPlugins={STREAMDOWN_REMARK_PLUGINS}
                       rehypePlugins={rehypePlugins}
                       remend={STREAMDOWN_REMEND}
                       mermaid={STREAMDOWN_MERMAID_OPTIONS}
