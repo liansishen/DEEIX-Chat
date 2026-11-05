@@ -194,6 +194,58 @@ function closesInlineMath(content: string, following: string | undefined): boole
   );
 }
 
+function strongDelimiterFlags(source: string, index: number): { opens: boolean; closes: boolean } {
+  const marker = source.slice(index, index + 2);
+  if (
+    (marker !== "**" && marker !== "__") ||
+    source[index - 1] === marker[0] || source[index + 2] === marker[0] ||
+    isEscapedCharacter(source, index)
+  ) {
+    return { opens: false, closes: false };
+  }
+  const before = source[index - 1] ?? " ";
+  const after = source[index + 2] ?? " ";
+  const beforePunctuation = /[\p{P}\p{S}]/u.test(before);
+  const afterPunctuation = /[\p{P}\p{S}]/u.test(after);
+  const leftFlanking = !/\s/.test(after) && (!afterPunctuation || /\s/.test(before) || beforePunctuation);
+  const rightFlanking = !/\s/.test(before) && (!beforePunctuation || /\s/.test(after) || afterPunctuation);
+  return {
+    opens: leftFlanking && (marker === "**" || !rightFlanking || beforePunctuation),
+    closes: rightFlanking && (marker === "**" || !leftFlanking || afterPunctuation),
+  };
+}
+
+function maskStrongMarkersInCode(source: string): string {
+  return source.replace(MARKDOWN_LITERAL_FRAGMENT_RE, (fragment) => fragment.replace(/[*_]/g, "a"));
+}
+
+// Search back to the nearest unambiguous strong marker within the same Markdown block.
+function isDollarBeforeStrongClose(source: string, index: number): boolean {
+  if (!strongDelimiterFlags(source, index + 1).closes) {
+    return false;
+  }
+  const marker = source.slice(index + 1, index + 3);
+  let inverted = false;
+  let end = index;
+  for (let cursor = source.lastIndexOf(marker, index - 1); cursor >= 0; cursor = source.lastIndexOf(marker, cursor - 1)) {
+    if (INLINE_MATH_BLOCK_BOUNDARY_RE.test(source.slice(cursor, end))) {
+      break;
+    }
+    const { opens, closes } = strongDelimiterFlags(source, cursor);
+    if (opens !== closes) {
+      return opens !== inverted;
+    }
+    if (opens) {
+      inverted = !inverted;
+    }
+    end = cursor;
+    if (cursor === 0) {
+      break;
+    }
+  }
+  return inverted;
+}
+
 // TeX ends inline math at the first unescaped dollar, so when that dollar cannot close the
 // formula the opening dollar is plain text.
 function findInlineMathClose(source: string, open: number): number {
@@ -231,7 +283,7 @@ type DollarMathSpan = {
 
 // Every pass that reads dollar math pairs delimiters here, so escaping, normalization and
 // plugin detection agree on what is a formula. Runs of three or more dollars are never math.
-function findDollarMathSpans(source: string): DollarMathSpan[] {
+function findDollarMathSpans(source: string, strongContext = maskStrongMarkersInCode(source), offset = 0): DollarMathSpan[] {
   const spans: DollarMathSpan[] = [];
   for (let index = 0; index < source.length; ) {
     if (!isUnescapedDollar(source, index)) {
@@ -241,7 +293,7 @@ function findDollarMathSpans(source: string): DollarMathSpan[] {
     const run = dollarRunLength(source, index);
     let close = -1;
     if (run === 1) {
-      close = findInlineMathClose(source, index);
+      close = isDollarBeforeStrongClose(strongContext, offset + index) ? -1 : findInlineMathClose(source, index);
     } else if (run === 2) {
       close = findDisplayMathClose(source, index + run);
     }
@@ -272,7 +324,7 @@ function normalizeDollarMathContent(mathContent: string, inline: boolean): strin
   return normalizeLatexPipes(normalizedContent);
 }
 
-function normalizeDollarMathSegments(source: string): string {
+function normalizeDollarMathSegments(source: string, strongPrefix = ""): string {
   if (!source.includes("$")) {
     return source;
   }
@@ -280,7 +332,7 @@ function normalizeDollarMathSegments(source: string): string {
   let normalizedSource = "";
   let consumedUntil = 0;
 
-  for (const span of findDollarMathSpans(source)) {
+  for (const span of findDollarMathSpans(source, strongPrefix + source, strongPrefix.length)) {
     const inline = span.delimiterLength === 1;
     const mathContent = source.slice(span.start + span.delimiterLength, span.end - span.delimiterLength);
     const shouldNormalize =
@@ -313,8 +365,9 @@ function normalizeDollarMathSegments(source: string): string {
 
 // Some models write inline math as \$x+1\$. Pairs of escaped dollars outside existing formulas
 // become math under the same closing rules, so escaped prices such as \$2 + \$3 stay text.
-function normalizeEscapedDollarDelimiters(source: string): string {
-  const insideFormula = createRangeMembership(findDollarMathSpans(source).map((span) => [span.start, span.end] as const));
+function normalizeEscapedDollarDelimiters(source: string, strongPrefix: string): string {
+  const strongContext = strongPrefix + source;
+  const insideFormula = createRangeMembership(findDollarMathSpans(source, strongContext, strongPrefix.length).map((span) => [span.start, span.end] as const));
   const backslashes: number[] = [];
   for (let index = source.indexOf("\\$"); index >= 0; index = source.indexOf("\\$", index + 2)) {
     if (!isEscapedCharacter(source, index) && !insideFormula(index)) {
@@ -330,6 +383,7 @@ function normalizeEscapedDollarDelimiters(source: string): string {
     const mathContent = source.slice(open + 2, close);
     if (
       mathContent.includes("$") ||
+      isDollarBeforeStrongClose(strongContext, strongPrefix.length + open + 1) ||
       !looksLikeLatexMathContent(mathContent) ||
       !closesInlineMath(mathContent, source[close + 2])
     ) {
@@ -344,11 +398,11 @@ function normalizeEscapedDollarDelimiters(source: string): string {
   return consumedUntil ? normalizedSource + source.slice(consumedUntil) : source;
 }
 
-function normalizeLatexDelimitersInText(source: string): string {
+function normalizeLatexDelimitersInText(source: string, strongPrefix: string): string {
   const normalizedSource = source
     .replace(/\\\[\s*\n?([\s\S]*?)\n?\s*\\\]/g, (_, mathContent: string) => `$$\n${mathContent.trim()}\n$$`)
     .replace(/\\\(([\s\S]*?)\\\)/g, (_, mathContent: string) => `$${mathContent.trim()}$`);
-  return normalizedSource.includes("\\$") ? normalizeEscapedDollarDelimiters(normalizedSource) : normalizedSource;
+  return normalizedSource.includes("\\$") ? normalizeEscapedDollarDelimiters(normalizedSource, strongPrefix) : normalizedSource;
 }
 
 export function normalizeMathDelimiters(source: string): string {
@@ -362,9 +416,11 @@ export function normalizeMathDelimiters(source: string): string {
     return source;
   }
 
-  return mapMarkdownTextFragments(source, (fragment) => {
-    const normalizedFragment = shouldNormalizeDelimiters ? normalizeLatexDelimitersInText(fragment) : fragment;
-    return normalizedFragment.includes("$") ? normalizeDollarMathSegments(normalizedFragment) : normalizedFragment;
+  const strongContext = maskStrongMarkersInCode(source);
+  return mapMarkdownTextFragments(source, (fragment, offset) => {
+    const strongPrefix = strongContext.slice(0, offset);
+    const normalizedFragment = shouldNormalizeDelimiters ? normalizeLatexDelimitersInText(fragment, strongPrefix) : fragment;
+    return normalizedFragment.includes("$") ? normalizeDollarMathSegments(normalizedFragment, strongPrefix) : normalizedFragment;
   });
 }
 
@@ -379,11 +435,12 @@ export function escapeNonMathDollars(source: string): string {
   }
 
   const insideIndentedCode = createRangeMembership(findIndentedCodeRanges(source));
+  const strongContext = maskStrongMarkersInCode(source);
   return mapMarkdownTextFragments(source, (fragment, offset) => {
     if (!fragment.includes("$")) {
       return fragment;
     }
-    const insideFormula = createRangeMembership(findDollarMathSpans(fragment).map((span) => [span.start, span.end] as const));
+    const insideFormula = createRangeMembership(findDollarMathSpans(fragment, strongContext, offset).map((span) => [span.start, span.end] as const));
     const insideURL = createRangeMembership(
       Array.from(fragment.matchAll(BARE_URL_RE), (match) => [match.index, match.index + match[0].length] as const),
     );
